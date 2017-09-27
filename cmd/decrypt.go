@@ -27,26 +27,29 @@ var decryptCmd = &cobra.Command{
 func init() {
   var (
     cipher string
+    suffix string
     clean  bool
     silent bool
   )
   decryptCmd.Flags().StringVar(&cipher, "cipher", "aes", "cipher suite to use, 'aes' or 'chacha'")
+  decryptCmd.Flags().StringVar(&suffix, "suffix", "_enc", "suffix to remove from encrypted files")
   decryptCmd.Flags().BoolVar(&clean, "clean", false, "remove sealed files after decrypt")
   decryptCmd.Flags().BoolVar(&silent, "silent", false, "suppress all output")
   viper.BindPFlag("decrypt.cipher", decryptCmd.Flags().Lookup("cipher"))
   viper.BindPFlag("decrypt.clean", decryptCmd.Flags().Lookup("clean"))
   viper.BindPFlag("decrypt.silent", decryptCmd.Flags().Lookup("silent"))
+  viper.BindPFlag("decrypt.suffix", decryptCmd.Flags().Lookup("suffix"))
   RootCmd.AddCommand(decryptCmd)
 }
 
-func decryptFile(w *tred.Worker, file string, clean bool) (*tred.Result, error) {
+func decryptFile(w *tred.Worker, file string) (*tred.Result, error) {
   input, err := os.Open(file)
   if err != nil {
     return nil, err
   }
   defer input.Close()
   
-  output, err := os.Create(strings.Replace(file, "_enc", "", 1))
+  output, err := os.Create(strings.Replace(file, viper.GetString("decrypt.suffix"), "", 1))
   if err != nil {
     return nil, err
   }
@@ -54,7 +57,7 @@ func decryptFile(w *tred.Worker, file string, clean bool) (*tred.Result, error) 
   
   res, err := w.Decrypt(input, output)
   if err == nil {
-    if clean {
+    if viper.GetBool("decrypt.clean") {
       defer os.Remove(file)
     }
   } else {
@@ -107,7 +110,6 @@ func runDecrypt(_ *cobra.Command, args []string) error {
   conf := tred.DefaultConfig(key)
   conf.Cipher = cs
   w := tred.NewWorker(conf)
-  fmt.Printf("\n")
   
   // Process input
   report := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
@@ -121,7 +123,7 @@ func runDecrypt(_ *cobra.Command, args []string) error {
     
     for _, file := range files {
       if ! file.IsDir() && ! strings.HasPrefix(file.Name(), ".") {
-        res, err := decryptFile(w, filepath.Join(path, file.Name()), viper.GetBool("decrypt.clean"))
+        res, err := decryptFile(w, filepath.Join(path, file.Name()))
         if err != nil {
           return err
         }
@@ -131,7 +133,7 @@ func runDecrypt(_ *cobra.Command, args []string) error {
     }
   } else {
     // Process single file
-    res, err := decryptFile(w, path, viper.GetBool("decrypt.clean"))
+    res, err := decryptFile(w, path)
     if err != nil {
       return err
     }
@@ -140,6 +142,7 @@ func runDecrypt(_ *cobra.Command, args []string) error {
   }
   
   if ! viper.GetBool("decrypt.silent") {
+    fmt.Printf("\n")
     report.Flush()
     fmt.Printf("=== Done in: %v\n", total)
   }

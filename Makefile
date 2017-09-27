@@ -5,8 +5,8 @@ BINARY_NAME=tred
 build:
 	go build -v -o $(BINARY_NAME)
 
-# Build linux systems
-build-linux:
+# Build for linux systems
+linux:
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -v -o $(BINARY_NAME)_linux
 
 # Download and compile all dependencies and intermediary products

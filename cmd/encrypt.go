@@ -27,26 +27,29 @@ var encryptCmd = &cobra.Command{
 func init() {
   var (
     cipher string
+    suffix string
     clean  bool
     silent bool
   )
   encryptCmd.Flags().StringVar(&cipher, "cipher", "aes", "cipher suite to use, 'aes' or 'chacha'")
+  encryptCmd.Flags().StringVar(&suffix, "suffix", "_enc", "suffix to add on encrypted files")
   encryptCmd.Flags().BoolVar(&clean, "clean", false, "remove original files after encrypt")
   encryptCmd.Flags().BoolVar(&silent, "silent", false, "suppress all output")
   viper.BindPFlag("encrypt.cipher", encryptCmd.Flags().Lookup("cipher"))
   viper.BindPFlag("encrypt.clean", encryptCmd.Flags().Lookup("clean"))
   viper.BindPFlag("encrypt.silent", encryptCmd.Flags().Lookup("silent"))
+  viper.BindPFlag("encrypt.suffix", encryptCmd.Flags().Lookup("suffix"))
   RootCmd.AddCommand(encryptCmd)
 }
 
-func encryptFile(w *tred.Worker, file string, clean bool) (*tred.Result, error) {
+func encryptFile(w *tred.Worker, file string) (*tred.Result, error) {
   input, err := os.Open(file)
   if err != nil {
     return nil, err
   }
   defer input.Close()
   
-  output, err := os.Create(fmt.Sprintf("%s_enc", file))
+  output, err := os.Create(fmt.Sprintf("%s%s", file, viper.GetString("encrypt.suffix")))
   if err != nil {
     return nil, err
   }
@@ -54,7 +57,7 @@ func encryptFile(w *tred.Worker, file string, clean bool) (*tred.Result, error) 
   
   res, err := w.Encrypt(input, output)
   if err == nil {
-    if clean {
+    if viper.GetBool("encrypt.clean") {
       defer os.Remove(file)
     }
   }
@@ -119,7 +122,7 @@ func runEncrypt(_ *cobra.Command, args []string) error {
     
     for _, file := range files {
       if ! file.IsDir() && ! strings.HasPrefix(file.Name(), ".") {
-        res, err := encryptFile(w, filepath.Join(path, file.Name()), viper.GetBool("encrypt.clean"))
+        res, err := encryptFile(w, filepath.Join(path, file.Name()))
         if err != nil {
           return err
         }
@@ -129,7 +132,7 @@ func runEncrypt(_ *cobra.Command, args []string) error {
     }
   } else {
     // Process single file
-    res, err := encryptFile(w, path, viper.GetBool("encrypt.clean"))
+    res, err := encryptFile(w, path)
     if err != nil {
       return err
     }
