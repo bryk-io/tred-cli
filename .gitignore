@@ -1,0 +1,17 @@
+# Generals
+.DS_Store
+.idea
+
+# Builds
+tred
+tred-*
+
+# Deps
+vendor/**
+glide.lock
+
+# PKI
+*.crt
+*.csr
+*.pem
+*.key

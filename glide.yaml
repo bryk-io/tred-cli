@@ -1,0 +1,4 @@
+package: github.com/bryk-io/tred-cli
+import:
+- package: github.com/spf13/cobra
+- package: github.com/spf13/viper
