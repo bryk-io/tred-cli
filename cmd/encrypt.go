@@ -13,6 +13,7 @@ import (
   "strings"
   "text/tabwriter"
   "time"
+  "encoding/json"
 )
 
 var encryptCmd = &cobra.Command{
@@ -28,30 +29,33 @@ func init() {
   var (
     cipher string
     suffix string
+    report string
     clean  bool
     silent bool
   )
   encryptCmd.Flags().StringVar(&cipher, "cipher", "aes", "cipher suite to use, 'aes' or 'chacha'")
   encryptCmd.Flags().StringVar(&suffix, "suffix", "_enc", "suffix to add on encrypted files")
+  encryptCmd.Flags().StringVar(&report, "report", "", "generate a JSON report of the process")
   encryptCmd.Flags().BoolVar(&clean, "clean", false, "remove original files after encrypt")
   encryptCmd.Flags().BoolVar(&silent, "silent", false, "suppress all output")
   viper.BindPFlag("encrypt.cipher", encryptCmd.Flags().Lookup("cipher"))
   viper.BindPFlag("encrypt.clean", encryptCmd.Flags().Lookup("clean"))
+  viper.BindPFlag("encrypt.report", encryptCmd.Flags().Lookup("report"))
   viper.BindPFlag("encrypt.silent", encryptCmd.Flags().Lookup("silent"))
   viper.BindPFlag("encrypt.suffix", encryptCmd.Flags().Lookup("suffix"))
   RootCmd.AddCommand(encryptCmd)
 }
 
-func encryptFile(w *tred.Worker, file string) (*tred.Result, error) {
+func encryptFile(w *tred.Worker, file string) (string, []byte, error) {
   input, err := os.Open(file)
   if err != nil {
-    return nil, err
+    return "", nil, err
   }
   defer input.Close()
   
   output, err := os.Create(fmt.Sprintf("%s%s", file, viper.GetString("encrypt.suffix")))
   if err != nil {
-    return nil, err
+    return "", nil, err
   }
   defer output.Close()
   
@@ -61,7 +65,7 @@ func encryptFile(w *tred.Worker, file string) (*tred.Result, error) {
       defer os.Remove(file)
     }
   }
-  return res, err
+  return filepath.Base(input.Name()), res.Checksum, nil
 }
 
 func runEncrypt(_ *cobra.Command, args []string) error {
@@ -111,8 +115,8 @@ func runEncrypt(_ *cobra.Command, args []string) error {
   fmt.Printf("\n")
   
   // Process input
-  report := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
-  var total time.Duration
+  report := make(map[string]string)
+  start := time.Now()
   if info.IsDir() {
     // Process all files inside the input directory
     files, err := ioutil.ReadDir(path)
@@ -122,27 +126,45 @@ func runEncrypt(_ *cobra.Command, args []string) error {
     
     for _, file := range files {
       if ! file.IsDir() && ! strings.HasPrefix(file.Name(), ".") {
-        res, err := encryptFile(w, filepath.Join(path, file.Name()))
+        file, checksum, err := encryptFile(w, filepath.Join(path, file.Name()))
         if err != nil {
           return err
         }
-        fmt.Fprintf(report, "%s\t%x\n", file.Name(), res.Checksum)
-        total += res.Duration
+        report[file] = fmt.Sprintf("%x", checksum)
       }
     }
   } else {
     // Process single file
-    res, err := encryptFile(w, path)
+    file, checksum, err := encryptFile(w, path)
     if err != nil {
       return err
     }
-    fmt.Fprintf(report, "%s\t%x\n", filepath.Base(path), res.Checksum)
-    total = res.Duration
+    report[file] = fmt.Sprintf("%x", checksum)
   }
   
   if ! viper.GetBool("encrypt.silent") {
-    report.Flush()
-    fmt.Printf("=== Done in: %v\n", total)
+    fmt.Printf("\n")
+    output := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
+    for k, v := range report {
+      fmt.Fprintf(output, "%s\t%s\n", k, v)
+    }
+    output.Flush()
+    fmt.Printf("=== Done in: %v\n", time.Since(start))
+  }
+  
+  // Generate JSON report
+  if viper.GetString("encrypt.report") != "" {
+    rp, err := filepath.Abs(viper.GetString("encrypt.report"))
+    if err != nil {
+      return err
+    }
+    rf, err := os.Create(rp)
+    if err != nil {
+      return err
+    }
+    js, _ := json.MarshalIndent(report, "", " ")
+    rf.Write(js)
+    rf.Close()
   }
   return nil
 }

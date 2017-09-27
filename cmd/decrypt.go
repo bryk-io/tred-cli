@@ -42,16 +42,16 @@ func init() {
   RootCmd.AddCommand(decryptCmd)
 }
 
-func decryptFile(w *tred.Worker, file string) (*tred.Result, error) {
+func decryptFile(w *tred.Worker, file string) (string, []byte, error) {
   input, err := os.Open(file)
   if err != nil {
-    return nil, err
+    return "", nil, err
   }
   defer input.Close()
   
   output, err := os.Create(strings.Replace(file, viper.GetString("decrypt.suffix"), "", 1))
   if err != nil {
-    return nil, err
+    return "", nil, err
   }
   defer output.Close()
   
@@ -63,7 +63,7 @@ func decryptFile(w *tred.Worker, file string) (*tred.Result, error) {
   } else {
     os.Remove(output.Name())
   }
-  return res, err
+  return filepath.Base(output.Name()), res.Checksum, err
 }
 
 func runDecrypt(_ *cobra.Command, args []string) error {
@@ -112,8 +112,8 @@ func runDecrypt(_ *cobra.Command, args []string) error {
   w := tred.NewWorker(conf)
   
   // Process input
-  report := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
-  var total time.Duration
+  report := make(map[string]string)
+  start := time.Now()
   if info.IsDir() {
     // Process all files inside the input directory
     files, err := ioutil.ReadDir(path)
@@ -123,28 +123,30 @@ func runDecrypt(_ *cobra.Command, args []string) error {
     
     for _, file := range files {
       if ! file.IsDir() && ! strings.HasPrefix(file.Name(), ".") {
-        res, err := decryptFile(w, filepath.Join(path, file.Name()))
+        file, checksum, err := decryptFile(w, filepath.Join(path, file.Name()))
         if err != nil {
           return err
         }
-        fmt.Fprintf(report, "%s\t%x\n", file.Name(), res.Checksum)
-        total += res.Duration
+        report[file] = fmt.Sprintf("%x", checksum)
       }
     }
   } else {
     // Process single file
-    res, err := decryptFile(w, path)
+    file, checksum, err := decryptFile(w, path)
     if err != nil {
       return err
     }
-    fmt.Fprintf(report, "%s\t%x\n", filepath.Base(path), res.Checksum)
-    total = res.Duration
+    report[file] = fmt.Sprintf("%x", checksum)
   }
   
   if ! viper.GetBool("decrypt.silent") {
     fmt.Printf("\n")
-    report.Flush()
-    fmt.Printf("=== Done in: %v\n", total)
+    output := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
+    for k, v := range report {
+      fmt.Fprintf(output, "%s\t%s\n", k, v)
+    }
+    output.Flush()
+    fmt.Printf("=== Done in: %v\n", time.Since(start))
   }
   return nil
 }
