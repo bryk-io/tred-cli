@@ -28,11 +28,14 @@ func init() {
   var (
     cipher string
     clean  bool
+    silent bool
   )
   encryptCmd.Flags().StringVar(&cipher, "cipher", "aes", "cipher suite to use, 'aes' or 'chacha'")
   encryptCmd.Flags().BoolVar(&clean, "clean", false, "remove original files after encrypt")
+  encryptCmd.Flags().BoolVar(&silent, "silent", false, "suppress all output")
   viper.BindPFlag("encrypt.cipher", encryptCmd.Flags().Lookup("cipher"))
   viper.BindPFlag("encrypt.clean", encryptCmd.Flags().Lookup("clean"))
+  viper.BindPFlag("encrypt.silent", encryptCmd.Flags().Lookup("silent"))
   RootCmd.AddCommand(encryptCmd)
 }
 
@@ -134,7 +137,9 @@ func runEncrypt(_ *cobra.Command, args []string) error {
     total = res.Duration
   }
   
-  report.Flush()
-  fmt.Printf("=== Done in: %v\n", total)
+  if ! viper.GetBool("encrypt.silent") {
+    report.Flush()
+    fmt.Printf("=== Done in: %v\n", total)
+  }
   return nil
 }
