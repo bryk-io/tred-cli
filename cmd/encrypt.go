@@ -10,6 +10,8 @@ import (
   "io/ioutil"
   "os"
   "path/filepath"
+  "strings"
+  "text/tabwriter"
   "time"
 )
 
@@ -35,7 +37,6 @@ func init() {
 }
 
 func encryptFile(w *tred.Worker, file string, clean bool) (*tred.Result, error) {
-  fmt.Printf("Processing: %s\n", file)
   input, err := os.Open(file)
   if err != nil {
     return nil, err
@@ -48,12 +49,13 @@ func encryptFile(w *tred.Worker, file string, clean bool) (*tred.Result, error) 
   }
   defer output.Close()
   
-  // Remove original file is requested
-  if clean {
-    defer os.Remove(file)
+  res, err := w.Encrypt(input, output)
+  if err == nil {
+    if clean {
+      defer os.Remove(file)
+    }
   }
-  
-  return w.Encrypt(input, output)
+  return res, err
 }
 
 func runEncrypt(_ *cobra.Command, args []string) error {
@@ -102,7 +104,8 @@ func runEncrypt(_ *cobra.Command, args []string) error {
   w := tred.NewWorker(conf)
   fmt.Printf("\n")
   
-  clean := viper.GetBool("encrypt.clean")
+  // Process input
+  report := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
   var total time.Duration
   if info.IsDir() {
     // Process all files inside the input directory
@@ -112,20 +115,26 @@ func runEncrypt(_ *cobra.Command, args []string) error {
     }
     
     for _, file := range files {
-      if ! file.IsDir() {
-        res, _ := encryptFile(w, filepath.Join(path, file.Name()), clean)
+      if ! file.IsDir() && ! strings.HasPrefix(file.Name(), ".") {
+        res, err := encryptFile(w, filepath.Join(path, file.Name()), viper.GetBool("encrypt.clean"))
+        if err != nil {
+          return err
+        }
+        fmt.Fprintf(report, "%s\t%x\n", file.Name(), res.Checksum)
         total += res.Duration
       }
     }
   } else {
     // Process single file
-    res, err := encryptFile(w, path, clean)
+    res, err := encryptFile(w, path, viper.GetBool("encrypt.clean"))
     if err != nil {
       return err
     }
+    fmt.Fprintf(report, "%s\t%x\n", filepath.Base(path), res.Checksum)
     total = res.Duration
   }
   
-  fmt.Printf("Done in: %v\n", total)
+  report.Flush()
+  fmt.Printf("=== Done in: %v\n", total)
   return nil
 }
