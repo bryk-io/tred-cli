@@ -10,14 +10,15 @@ import (
   "io/ioutil"
   "os"
   "path/filepath"
+  "strings"
   "time"
 )
 
-var encryptCmd = &cobra.Command{
-  Use:           "encrypt input",
-  Aliases:       []string{"enc", "seal"},
-  Short:         "Encrypt provided file or directory",
-  RunE:          runEncrypt,
+var decryptCmd = &cobra.Command{
+  Use:           "decrypt input",
+  Aliases:       []string{"dec", "open"},
+  Short:         "Decrypt provided file or directory",
+  RunE:          runDecrypt,
   SilenceErrors: true,
   SilenceUsage:  true,
 }
@@ -27,14 +28,14 @@ func init() {
     cipher string
     clean  bool
   )
-  encryptCmd.Flags().StringVar(&cipher, "cipher", "aes", "cipher suite to use, 'aes' or 'chacha'")
-  encryptCmd.Flags().BoolVar(&clean, "clean", false, "remove original files after encrypt")
-  viper.BindPFlag("encrypt.cipher", encryptCmd.Flags().Lookup("cipher"))
-  viper.BindPFlag("encrypt.clean", encryptCmd.Flags().Lookup("clean"))
-  RootCmd.AddCommand(encryptCmd)
+  decryptCmd.Flags().StringVar(&cipher, "cipher", "aes", "cipher suite to use, 'aes' or 'chacha'")
+  decryptCmd.Flags().BoolVar(&clean, "clean", false, "remove sealed files after decrypt")
+  viper.BindPFlag("decrypt.cipher", decryptCmd.Flags().Lookup("cipher"))
+  viper.BindPFlag("decrypt.clean", decryptCmd.Flags().Lookup("clean"))
+  RootCmd.AddCommand(decryptCmd)
 }
 
-func encryptFile(w *tred.Worker, file string, clean bool) (*tred.Result, error) {
+func decryptFile(w *tred.Worker, file string, clean bool) (*tred.Result, error) {
   fmt.Printf("Processing: %s\n", file)
   input, err := os.Open(file)
   if err != nil {
@@ -42,7 +43,7 @@ func encryptFile(w *tred.Worker, file string, clean bool) (*tred.Result, error) 
   }
   defer input.Close()
   
-  output, err := os.Create(fmt.Sprintf("%s_enc", file))
+  output, err := os.Create(strings.Replace(file, "_enc", "", 1))
   if err != nil {
     return nil, err
   }
@@ -53,10 +54,10 @@ func encryptFile(w *tred.Worker, file string, clean bool) (*tred.Result, error) 
     defer os.Remove(file)
   }
   
-  return w.Encrypt(input, output)
+  return w.Decrypt(input, output)
 }
 
-func runEncrypt(_ *cobra.Command, args []string) error {
+func runDecrypt(_ *cobra.Command, args []string) error {
   // Get input
   if len(args) == 0 {
     return errors.New("missing required input")
@@ -74,7 +75,7 @@ func runEncrypt(_ *cobra.Command, args []string) error {
   
   // Get cipher suite
   var cs byte
-  switch viper.GetString("encrypt.cipher") {
+  switch viper.GetString("decrypt.cipher") {
   case "aes":
     cs = tred.AES_GCM
   case "chacha":
@@ -102,7 +103,7 @@ func runEncrypt(_ *cobra.Command, args []string) error {
   w := tred.NewWorker(conf)
   fmt.Printf("\n")
   
-  clean := viper.GetBool("encrypt.clean")
+  clean := viper.GetBool("decrypt.clean")
   var total time.Duration
   if info.IsDir() {
     // Process all files inside the input directory
@@ -113,13 +114,16 @@ func runEncrypt(_ *cobra.Command, args []string) error {
     
     for _, file := range files {
       if ! file.IsDir() {
-        res, _ := encryptFile(w, filepath.Join(path, file.Name()), clean)
+        res, err := decryptFile(w, filepath.Join(path, file.Name()), clean)
+        if err != nil {
+          return err
+        }
         total += res.Duration
       }
     }
   } else {
     // Process single file
-    res, err := encryptFile(w, path, clean)
+    res, err := decryptFile(w, path, clean)
     if err != nil {
       return err
     }

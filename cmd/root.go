@@ -3,6 +3,7 @@ package cmd
 import (
   "fmt"
   "github.com/spf13/cobra"
+  "golang.org/x/crypto/ssh/terminal"
   "os"
 )
 
@@ -17,4 +18,10 @@ func Execute() {
     fmt.Println(err)
     os.Exit(1)
   }
+}
+
+// Helper method to securely read data from stdin
+func secureAsk(prompt string) ([]byte, error) {
+  fmt.Print(prompt)
+  return terminal.ReadPassword(0)
 }
