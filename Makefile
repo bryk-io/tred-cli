@@ -14,3 +14,8 @@ clean:
 	rm -rf vendor glide.lock
 	glide cache-clear
 	glide install
+
+# Install the binary to '$GOPATH/bin'
+install:
+	make build
+	mv $(BINARY_NAME) $(GOPATH)/bin/.
