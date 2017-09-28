@@ -2,6 +2,7 @@ package cmd
 
 import (
   "bytes"
+  "encoding/json"
   "errors"
   "fmt"
   "github.com/bryk-io/x/crypto/tred"
@@ -28,17 +29,20 @@ func init() {
   var (
     cipher string
     suffix string
+    report string
     clean  bool
     silent bool
   )
   decryptCmd.Flags().StringVar(&cipher, "cipher", "aes", "cipher suite to use, 'aes' or 'chacha'")
   decryptCmd.Flags().StringVar(&suffix, "suffix", "_enc", "suffix to remove from encrypted files")
+  decryptCmd.Flags().StringVar(&report, "report", "", "validate input against a JSON report")
   decryptCmd.Flags().BoolVar(&clean, "clean", false, "remove sealed files after decrypt")
   decryptCmd.Flags().BoolVar(&silent, "silent", false, "suppress all output")
   viper.BindPFlag("decrypt.cipher", decryptCmd.Flags().Lookup("cipher"))
   viper.BindPFlag("decrypt.clean", decryptCmd.Flags().Lookup("clean"))
   viper.BindPFlag("decrypt.silent", decryptCmd.Flags().Lookup("silent"))
   viper.BindPFlag("decrypt.suffix", decryptCmd.Flags().Lookup("suffix"))
+  viper.BindPFlag("decrypt.report", decryptCmd.Flags().Lookup("report"))
   RootCmd.AddCommand(decryptCmd)
 }
 
@@ -64,6 +68,17 @@ func decryptFile(w *tred.Worker, file string) (string, []byte, error) {
     os.Remove(output.Name())
   }
   return filepath.Base(output.Name()), res.Checksum, err
+}
+
+func validateEntry(index map[string]string, file, checksum string) bool {
+  if len(index) > 0 {
+    if _, ok := index[file]; ok {
+      if index[file] != checksum {
+        return false
+      }
+    }
+  }
+  return true
 }
 
 func runDecrypt(_ *cobra.Command, args []string) error {
@@ -111,6 +126,23 @@ func runDecrypt(_ *cobra.Command, args []string) error {
   conf.Cipher = cs
   w := tred.NewWorker(conf)
   
+  // Load index if provided
+  index := make(map[string]string)
+  if viper.GetString("decrypt.report") != "" {
+    rp, err := filepath.Abs(viper.GetString("decrypt.report"))
+    if err != nil {
+      return err
+    }
+    rf, err := ioutil.ReadFile(rp)
+    if err != nil {
+      return err
+    }
+    err = json.Unmarshal(rf, &index)
+    if err != nil {
+      return err
+    }
+  }
+  
   // Process input
   report := make(map[string]string)
   start := time.Now()
@@ -127,7 +159,12 @@ func runDecrypt(_ *cobra.Command, args []string) error {
         if err != nil {
           return err
         }
-        report[file] = fmt.Sprintf("%x", checksum)
+        
+        digest := fmt.Sprintf("%x", checksum)
+        if ! validateEntry(index, file, digest) {
+          fmt.Printf("invalid checksum value for entry: %s\n", file)
+        }
+        report[file] = digest
       }
     }
   } else {
@@ -136,7 +173,11 @@ func runDecrypt(_ *cobra.Command, args []string) error {
     if err != nil {
       return err
     }
-    report[file] = fmt.Sprintf("%x", checksum)
+    digest := fmt.Sprintf("%x", checksum)
+    if ! validateEntry(index, file, digest) {
+      fmt.Printf("invalid checksum value for entry: %s\n", file)
+    }
+    report[file] = digest
   }
   
   if ! viper.GetBool("decrypt.silent") {
