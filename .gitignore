@@ -8,7 +8,6 @@ tred-*
 
 # Deps
 vendor/**
-glide.lock
 
 # PKI
 *.crt

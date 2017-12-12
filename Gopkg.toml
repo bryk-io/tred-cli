@@ -1,0 +1,20 @@
+[prune]
+  unused-packages = true
+  non-go = true
+  go-tests = true
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/bryk-io/x"
+  source = "github.com/bcessa/bryk-pkg.git"
+
+[[constraint]]
+  name = "github.com/spf13/cobra"
+  version = "v0.0.1"
+
+[[constraint]]
+  name = "github.com/spf13/viper"
+  version = "v1.0.0"
+
+[[constraint]]
+  name = "golang.org/x/crypto"

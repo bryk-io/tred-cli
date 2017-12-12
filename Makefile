@@ -11,9 +11,7 @@ linux:
 
 # Download and compile all dependencies and intermediary products
 clean:
-	rm -rf vendor glide.lock
-	glide cache-clear
-	glide install
+	dep ensure -v
 
 # Install the binary to '$GOPATH/bin'
 install:
