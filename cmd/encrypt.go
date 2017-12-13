@@ -2,6 +2,7 @@ package cmd
 
 import (
   "bytes"
+  "encoding/json"
   "errors"
   "fmt"
   "github.com/bryk-io/x/crypto/tred"
@@ -11,9 +12,8 @@ import (
   "os"
   "path/filepath"
   "strings"
-  "text/tabwriter"
+  "sync"
   "time"
-  "encoding/json"
 )
 
 var encryptCmd = &cobra.Command{
@@ -111,7 +111,10 @@ func runEncrypt(_ *cobra.Command, args []string) error {
   // Get worker instance
   conf := tred.DefaultConfig(key)
   conf.Cipher = cs
-  w := tred.NewWorker(conf)
+  w, err := tred.NewWorker(conf)
+  if err != nil {
+    return err
+  }
   fmt.Printf("\n")
   
   // Process input
@@ -124,15 +127,20 @@ func runEncrypt(_ *cobra.Command, args []string) error {
       return err
     }
     
+    wg := sync.WaitGroup{}
     for _, file := range files {
       if ! file.IsDir() && ! strings.HasPrefix(file.Name(), ".") {
-        file, checksum, err := encryptFile(w, filepath.Join(path, file.Name()))
-        if err != nil {
-          return err
-        }
-        report[file] = fmt.Sprintf("%x", checksum)
+        wg.Add(1)
+        go func(file os.FileInfo, report map[string]string) {
+          f, checksum, err := encryptFile(w, filepath.Join(path, file.Name()))
+          if err == nil {
+            report[f] = fmt.Sprintf("%x", checksum)
+          }
+          wg.Done()
+        }(file, report)
       }
     }
+    wg.Wait()
   } else {
     // Process single file
     file, checksum, err := encryptFile(w, path)
@@ -143,12 +151,6 @@ func runEncrypt(_ *cobra.Command, args []string) error {
   }
   
   if ! viper.GetBool("encrypt.silent") {
-    fmt.Printf("\n")
-    output := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
-    for k, v := range report {
-      fmt.Fprintf(output, "%s\t%s\n", k, v)
-    }
-    output.Flush()
     fmt.Printf("=== Done in: %v\n", time.Since(start))
   }
   
