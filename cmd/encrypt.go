@@ -134,6 +134,9 @@ func runEncrypt(_ *cobra.Command, args []string) error {
         go func(file os.FileInfo, report map[string]string) {
           f, checksum, err := encryptFile(w, filepath.Join(path, file.Name()))
           if err == nil {
+            if ! viper.GetBool("decrypt.silent") {
+              fmt.Printf(">> %s\n", f)
+            }
             report[f] = fmt.Sprintf("%x", checksum)
           }
           wg.Done()

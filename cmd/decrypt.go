@@ -12,7 +12,7 @@ import (
   "os"
   "path/filepath"
   "strings"
-  "text/tabwriter"
+  "sync"
   "time"
 )
 
@@ -66,6 +66,7 @@ func decryptFile(w *tred.Worker, file string) (string, []byte, error) {
     }
   } else {
     os.Remove(output.Name())
+    return "", nil, err
   }
   return filepath.Base(output.Name()), res.Checksum, err
 }
@@ -124,7 +125,11 @@ func runDecrypt(_ *cobra.Command, args []string) error {
   // Get worker instance
   conf := tred.DefaultConfig(key)
   conf.Cipher = cs
-  w := tred.NewWorker(conf)
+  w, err := tred.NewWorker(conf)
+  if err != nil {
+    return err
+  }
+  fmt.Printf("\n")
   
   // Load index if provided
   index := make(map[string]string)
@@ -152,21 +157,30 @@ func runDecrypt(_ *cobra.Command, args []string) error {
     if err != nil {
       return err
     }
-    
+  
+    wg := sync.WaitGroup{}
     for _, file := range files {
       if ! file.IsDir() && ! strings.HasPrefix(file.Name(), ".") {
-        file, checksum, err := decryptFile(w, filepath.Join(path, file.Name()))
-        if err != nil {
-          return err
-        }
-        
-        digest := fmt.Sprintf("%x", checksum)
-        if ! validateEntry(index, file, digest) {
-          fmt.Printf("invalid checksum value for entry: %s\n", file)
-        }
-        report[file] = digest
+        wg.Add(1)
+        go func(file os.FileInfo, report map[string]string) {
+          f, checksum, err := decryptFile(w, filepath.Join(path, file.Name()))
+          if err == nil {
+            digest := fmt.Sprintf("%x", checksum)
+            if ! validateEntry(index, f, digest) {
+              fmt.Printf("invalid checksum value for entry: %s\n", f)
+            }
+            if ! viper.GetBool("decrypt.silent") {
+              fmt.Printf(">> %s\n", f)
+            }
+            report[f] = digest
+          } else {
+            fmt.Printf("ERROR: %s for: %s\n", err, file.Name())
+          }
+          wg.Done()
+        }(file, report)
       }
     }
+    wg.Wait()
   } else {
     // Process single file
     file, checksum, err := decryptFile(w, path)
@@ -181,12 +195,6 @@ func runDecrypt(_ *cobra.Command, args []string) error {
   }
   
   if ! viper.GetBool("decrypt.silent") {
-    fmt.Printf("\n")
-    output := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
-    for k, v := range report {
-      fmt.Fprintf(output, "%s\t%s\n", k, v)
-    }
-    output.Flush()
     fmt.Printf("=== Done in: %v\n", time.Since(start))
   }
   return nil

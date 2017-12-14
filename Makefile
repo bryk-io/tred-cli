@@ -15,5 +15,4 @@ clean:
 
 # Install the binary to '$GOPATH/bin'
 install:
-	make build
-	mv $(BINARY_NAME) $(GOPATH)/bin/.
+	go build -v -i -o ${GOPATH}/bin/$(BINARY_NAME)
