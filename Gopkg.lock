@@ -9,6 +9,12 @@
   source = "github.com/bcessa/bryk-pkg.git"
 
 [[projects]]
+  name = "github.com/cheggaaa/pb"
+  packages = ["."]
+  revision = "18d384da9bdc1e5a08fc2a62a494c321d9ae74ea"
+  version = "v1.0.19"
+
+[[projects]]
   name = "github.com/fsnotify/fsnotify"
   packages = ["."]
   revision = "629574ca2a5df945712d3079857300b5e4da0236"
@@ -31,6 +37,12 @@
   packages = ["."]
   revision = "d419a98cdbed11a922bf76f257b7c4be79b50e73"
   version = "v1.7.4"
+
+[[projects]]
+  name = "github.com/mattn/go-runewidth"
+  packages = ["."]
+  revision = "9e777a8366cce605130a531d2cd6363d07ad7317"
+  version = "v0.0.2"
 
 [[projects]]
   branch = "master"
@@ -107,6 +119,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "923b0850c6b08d456df8e3a829352b2e4ec2ee55ad90bf176e359055ffd67e0d"
+  inputs-digest = "f8fdbcab99729bc4b9ddd2aa83663f325ad6ffc616af35dd12e907b6475c76bd"
   solver-name = "gps-cdcl"
   solver-version = 1
