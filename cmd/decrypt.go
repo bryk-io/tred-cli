@@ -8,6 +8,7 @@ import (
   "github.com/bryk-io/x/crypto/tred"
   "github.com/spf13/cobra"
   "github.com/spf13/viper"
+  "io"
   "io/ioutil"
   "os"
   "path/filepath"
@@ -46,7 +47,7 @@ func init() {
   RootCmd.AddCommand(decryptCmd)
 }
 
-func decryptFile(w *tred.Worker, file string) (string, []byte, error) {
+func decryptFile(w *tred.Worker, file string, withBar bool) (string, []byte, error) {
   input, err := os.Open(file)
   if err != nil {
     return "", nil, err
@@ -59,7 +60,16 @@ func decryptFile(w *tred.Worker, file string) (string, []byte, error) {
   }
   defer output.Close()
   
-  res, err := w.Decrypt(input, output)
+  var r io.Reader
+  r = input
+  if ! viper.GetBool("encrypt.silent") && withBar {
+    info, _ := input.Stat()
+    bar := getProgressBar(info)
+    bar.Start()
+    defer bar.Finish()
+    r = bar.NewProxyReader(input)
+  }
+  res, err := w.Decrypt(r, output)
   if err == nil {
     if viper.GetBool("decrypt.clean") {
       defer os.Remove(file)
@@ -163,7 +173,7 @@ func runDecrypt(_ *cobra.Command, args []string) error {
       if ! file.IsDir() && ! strings.HasPrefix(file.Name(), ".") {
         wg.Add(1)
         go func(file os.FileInfo, report map[string]string) {
-          f, checksum, err := decryptFile(w, filepath.Join(path, file.Name()))
+          f, checksum, err := decryptFile(w, filepath.Join(path, file.Name()), false)
           if err == nil {
             digest := fmt.Sprintf("%x", checksum)
             if ! validateEntry(index, f, digest) {
@@ -183,7 +193,7 @@ func runDecrypt(_ *cobra.Command, args []string) error {
     wg.Wait()
   } else {
     // Process single file
-    file, checksum, err := decryptFile(w, path)
+    file, checksum, err := decryptFile(w, path, true)
     if err != nil {
       return err
     }
