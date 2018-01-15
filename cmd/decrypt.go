@@ -1,7 +1,6 @@
 package cmd
 
 import (
-  "bytes"
   "encoding/json"
   "errors"
   "fmt"
@@ -123,13 +122,6 @@ func runDecrypt(_ *cobra.Command, args []string) error {
   key, err := secureAsk("\nEncryption Key: ")
   if err != nil {
     return err
-  }
-  confirmation, err := secureAsk("\nConfirm Key: ")
-  if err != nil {
-    return err
-  }
-  if ! bytes.Equal(key, confirmation) {
-    return errors.New("provided keys don't match")
   }
   
   // Get worker instance
