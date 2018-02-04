@@ -6,7 +6,6 @@
   name = "github.com/bryk-io/x"
   packages = ["crypto/tred"]
   revision = "364b7e813a1350e5d45fd7c47029e58693a93706"
-  source = "github.com/bcessa/bryk-pkg.git"
 
 [[projects]]
   name = "github.com/cheggaaa/pb"
@@ -23,7 +22,17 @@
 [[projects]]
   branch = "master"
   name = "github.com/hashicorp/hcl"
-  packages = [".","hcl/ast","hcl/parser","hcl/scanner","hcl/strconv","hcl/token","json/parser","json/scanner","json/token"]
+  packages = [
+    ".",
+    "hcl/ast",
+    "hcl/parser",
+    "hcl/scanner",
+    "hcl/strconv",
+    "hcl/token",
+    "json/parser",
+    "json/scanner",
+    "json/token"
+  ]
   revision = "23c074d0eceb2b8a5bfdbb271ab780cde70f05a8"
 
 [[projects]]
@@ -58,7 +67,10 @@
 
 [[projects]]
   name = "github.com/spf13/afero"
-  packages = [".","mem"]
+  packages = [
+    ".",
+    "mem"
+  ]
   revision = "8d919cbe7e2627e417f3e45c3c0e489a5b7e2536"
   version = "v1.0.0"
 
@@ -95,19 +107,36 @@
 [[projects]]
   branch = "master"
   name = "golang.org/x/crypto"
-  packages = ["chacha20poly1305","chacha20poly1305/internal/chacha20","hkdf","poly1305","sha3","ssh/terminal"]
+  packages = [
+    "chacha20poly1305",
+    "chacha20poly1305/internal/chacha20",
+    "hkdf",
+    "poly1305",
+    "sha3",
+    "ssh/terminal"
+  ]
   revision = "94eea52f7b742c7cbe0b03b22f0c4c8631ece122"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/sys"
-  packages = ["unix","windows"]
+  packages = [
+    "unix",
+    "windows"
+  ]
   revision = "d5840adf789d732bc8b00f37b26ca956a7cc8e79"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/text"
-  packages = ["internal/gen","internal/triegen","internal/ucd","transform","unicode/cldr","unicode/norm"]
+  packages = [
+    "internal/gen",
+    "internal/triegen",
+    "internal/ucd",
+    "transform",
+    "unicode/cldr",
+    "unicode/norm"
+  ]
   revision = "73f72487b7d8a81970fbf571cd9b660d3d5e604c"
 
 [[projects]]
@@ -119,6 +148,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "f8fdbcab99729bc4b9ddd2aa83663f325ad6ffc616af35dd12e907b6475c76bd"
+  inputs-digest = "53ddc540f0d30e8a591660c7fa2e9c40598946286875800ed99eaaa12cd4198d"
   solver-name = "gps-cdcl"
   solver-version = 1

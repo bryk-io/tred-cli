@@ -6,7 +6,6 @@
 [[constraint]]
   branch = "master"
   name = "github.com/bryk-io/x"
-  source = "github.com/bcessa/bryk-pkg.git"
 
 [[constraint]]
   name = "github.com/spf13/cobra"
