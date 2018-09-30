@@ -4,8 +4,8 @@
   go-tests = true
 
 [[constraint]]
-  branch = "master"
   name = "github.com/bryk-io/x"
+  revision = "e921e2ebd60460fcf3bb784af20b0a9909a479d0"
 
 [[constraint]]
   name = "github.com/spf13/cobra"
@@ -17,7 +17,8 @@
 
 [[constraint]]
   name = "golang.org/x/crypto"
+  branch = "master"
 
 [[constraint]]
   name = "github.com/cheggaaa/pb"
-  version = "1.0.18"
+  version = "v1.0.25"

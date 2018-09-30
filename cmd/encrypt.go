@@ -1,25 +1,24 @@
 package cmd
 
 import (
-	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/bryk-io/x/crypto/tred"
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 	"io"
-	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
-	"time"
+
+	"github.com/bryk-io/x/crypto/tred"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 var encryptCmd = &cobra.Command{
-	Use:           "encrypt input",
+	Use:           "encrypt",
 	Aliases:       []string{"enc", "seal"},
+	Example:       "tred encrypt -dr -c chacha [INPUT]",
 	Short:         "Encrypt provided file or directory",
 	RunE:          runEncrypt,
 	SilenceErrors: true,
@@ -28,54 +27,73 @@ var encryptCmd = &cobra.Command{
 
 func init() {
 	var (
-		cipher string
-		suffix string
-		report string
-		clean  bool
-		silent bool
+		err       error
+		cipher    string
+		suffix    string
+		clean     bool
+		silent    bool
+		recursive bool
 	)
-	encryptCmd.Flags().StringVar(&cipher, "cipher", "aes", "cipher suite to use, 'aes' or 'chacha'")
+	encryptCmd.Flags().StringVarP(&cipher, "cipher", "c", "aes", "cipher suite to use, 'aes' or 'chacha'")
 	encryptCmd.Flags().StringVar(&suffix, "suffix", "_enc", "suffix to add on encrypted files")
-	encryptCmd.Flags().StringVar(&report, "report", "", "generate a JSON report of the process")
-	encryptCmd.Flags().BoolVar(&clean, "clean", false, "remove original files after encrypt")
-	encryptCmd.Flags().BoolVar(&silent, "silent", false, "suppress all output")
-	viper.BindPFlag("encrypt.cipher", encryptCmd.Flags().Lookup("cipher"))
-	viper.BindPFlag("encrypt.clean", encryptCmd.Flags().Lookup("clean"))
-	viper.BindPFlag("encrypt.report", encryptCmd.Flags().Lookup("report"))
-	viper.BindPFlag("encrypt.silent", encryptCmd.Flags().Lookup("silent"))
-	viper.BindPFlag("encrypt.suffix", encryptCmd.Flags().Lookup("suffix"))
+	encryptCmd.Flags().BoolVarP(&clean, "clean", "d", false, "remove original files after encrypt")
+	encryptCmd.Flags().BoolVarP(&silent, "silent", "s", false, "suppress all output")
+	encryptCmd.Flags().BoolVarP(&recursive, "recursive", "r", false, "recursively process directories")
+	err = viper.BindPFlag("encrypt.cipher", encryptCmd.Flags().Lookup("cipher"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = viper.BindPFlag("encrypt.clean", encryptCmd.Flags().Lookup("clean"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = viper.BindPFlag("encrypt.silent", encryptCmd.Flags().Lookup("silent"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = viper.BindPFlag("encrypt.suffix", encryptCmd.Flags().Lookup("suffix"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = viper.BindPFlag("encrypt.recursive", encryptCmd.Flags().Lookup("recursive"))
+	if err != nil {
+		log.Fatal(err)
+	}
 	rootCmd.AddCommand(encryptCmd)
 }
 
-func encryptFile(w *tred.Worker, file string, withBar bool) (string, []byte, error) {
-	input, err := os.Open(file)
+func encryptFile(w *tred.Worker, file string, withBar bool) error {
+	input, err := os.Open(filepath.Clean(file))
 	if err != nil {
-		return "", nil, err
+		return err
 	}
 	defer input.Close()
 
 	output, err := os.Create(fmt.Sprintf("%s%s", file, viper.GetString("encrypt.suffix")))
 	if err != nil {
-		return "", nil, err
+		return err
 	}
 	defer output.Close()
 
 	var r io.Reader
 	r = input
 	if !viper.GetBool("encrypt.silent") && withBar {
-		info, _ := input.Stat()
+		info, err := input.Stat()
+		if err != nil {
+			return err
+		}
 		bar := getProgressBar(info)
 		bar.Start()
 		defer bar.Finish()
 		r = bar.NewProxyReader(input)
 	}
-	res, err := w.Encrypt(r, output)
+	_, err = w.Encrypt(r, output)
 	if err == nil {
 		if viper.GetBool("encrypt.clean") {
 			defer os.Remove(file)
 		}
 	}
-	return filepath.Base(input.Name()), res.Checksum, nil
+	return err
 }
 
 func runEncrypt(_ *cobra.Command, args []string) error {
@@ -85,101 +103,62 @@ func runEncrypt(_ *cobra.Command, args []string) error {
 	}
 
 	// Get input absolute path
-	path, err := filepath.Abs(args[0])
+	source, err := filepath.Abs(args[0])
 	if err != nil {
 		return err
-	}
-	info, err := os.Stat(path)
-	if err != nil {
-		return err
-	}
-
-	// Get cipher suite
-	var cs byte
-	switch viper.GetString("encrypt.cipher") {
-	case "aes":
-		cs = tred.AES_GCM
-	case "chacha":
-		cs = tred.CHACHA20
-	default:
-		return errors.New("invalid cipher suite")
 	}
 
 	// Get encryption key
-	key, err := secureAsk("\nEncryption Key: ")
+	key, err := getInteractiveKey()
 	if err != nil {
 		return err
-	}
-	confirmation, err := secureAsk("\nConfirm Key: ")
-	if err != nil {
-		return err
-	}
-	if !bytes.Equal(key, confirmation) {
-		return errors.New("provided keys don't match")
 	}
 
 	// Get worker instance
-	conf := tred.DefaultConfig(key)
-	conf.Cipher = cs
-	w, err := tred.NewWorker(conf)
+	w, err := getWorker(key, viper.GetString("encrypt.cipher"))
 	if err != nil {
 		return err
 	}
-	fmt.Printf("\n")
 
 	// Process input
-	report := make(map[string]string)
-	start := time.Now()
-	if info.IsDir() {
-		// Process all files inside the input directory
-		files, err := ioutil.ReadDir(path)
-		if err != nil {
-			return err
-		}
-
+	if isDir(source) {
 		wg := sync.WaitGroup{}
-		for _, file := range files {
-			if !file.IsDir() && !strings.HasPrefix(file.Name(), ".") {
-				wg.Add(1)
-				go func(file os.FileInfo, report map[string]string) {
-					f, checksum, err := encryptFile(w, filepath.Join(path, file.Name()), false)
-					if err == nil {
-						if !viper.GetBool("decrypt.silent") {
-							fmt.Printf(">> %s\n", f)
-						}
-						report[f] = fmt.Sprintf("%x", checksum)
-					}
-					wg.Done()
-				}(file, report)
+		err := filepath.Walk(source, func(f string, i os.FileInfo, err error) error {
+			// Unexpected error walking the directory
+			if err != nil {
+				return err
 			}
-		}
+
+			// Ignore hidden files
+			if strings.HasPrefix(filepath.Base(f), ".") {
+				return nil
+			}
+
+			// Don't go into sub-directories if not required
+			if i.IsDir() && !viper.GetBool("encrypt.recursive") {
+				return filepath.SkipDir
+			}
+
+			// Ignore subdir markers
+			if i.IsDir() {
+				return nil
+			}
+
+			// Process regular file
+			wg.Add(1)
+			go func(entry string) {
+				err := encryptFile(w, entry, false)
+				if err == nil && !viper.GetBool("encrypt.silent") {
+					fmt.Printf(">> %s\n", entry)
+				}
+				wg.Done()
+			}(f)
+			return nil
+		})
 		wg.Wait()
-	} else {
-		// Process single file
-		file, checksum, err := encryptFile(w, path, true)
-		if err != nil {
-			return err
-		}
-		report[file] = fmt.Sprintf("%x", checksum)
+		return err
 	}
 
-	if !viper.GetBool("encrypt.silent") {
-		fmt.Printf("=== Done in: %v\n", time.Since(start))
-	}
-
-	// Generate JSON report
-	if viper.GetString("encrypt.report") != "" {
-		rp, err := filepath.Abs(viper.GetString("encrypt.report"))
-		if err != nil {
-			return err
-		}
-		rf, err := os.Create(rp)
-		if err != nil {
-			return err
-		}
-		js, _ := json.MarshalIndent(report, "", " ")
-		rf.Write(js)
-		rf.Close()
-	}
-	return nil
+	// Process single file
+	return encryptFile(w, source, true)
 }

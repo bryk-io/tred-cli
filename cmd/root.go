@@ -1,12 +1,16 @@
 package cmd
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
+
+	"github.com/bryk-io/x/crypto/tred"
 	"github.com/cheggaaa/pb"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh/terminal"
-	"os"
-	"path/filepath"
 )
 
 var rootCmd = &cobra.Command{
@@ -28,6 +32,22 @@ func secureAsk(prompt string) ([]byte, error) {
 	return terminal.ReadPassword(0)
 }
 
+// Ask the user to enter a key phrase that will be used to expand a secure cryptographic key
+func getInteractiveKey() ([]byte, error) {
+	key, err := secureAsk("\nEncryption Key: ")
+	if err != nil {
+		return nil, err
+	}
+	confirmation, err := secureAsk("\nConfirm Key: ")
+	if err != nil {
+		return nil, err
+	}
+	if !bytes.Equal(key, confirmation) {
+		return nil, errors.New("provided keys don't match")
+	}
+	return key, nil
+}
+
 // Get a progress bar for based on a file details
 func getProgressBar(info os.FileInfo) *pb.ProgressBar {
 	prefix := fmt.Sprintf("%-30s", filepath.Base(info.Name()))
@@ -35,4 +55,35 @@ func getProgressBar(info os.FileInfo) *pb.ProgressBar {
 	bar.SetWidth(100)
 	bar.SetMaxWidth(100)
 	return bar
+}
+
+// Inspect if the passed in file path is a directory or not
+func isDir(file string) bool {
+	info, err := os.Stat(file)
+	if err != nil {
+		return false
+	}
+	return info.IsDir()
+}
+
+// Return a new TRED worker instance
+func getWorker(key []byte, cipher string) (*tred.Worker, error) {
+	// Get cipher suite
+	var cs byte
+	switch cipher {
+	case "aes":
+		cs = tred.AES
+	case "chacha":
+		cs = tred.CHACHA20
+	default:
+		return nil, errors.New("invalid cipher suite")
+	}
+
+	// Get worker instance
+	conf, err := tred.DefaultConfig(key)
+	if err != nil {
+		return nil, err
+	}
+	conf.Cipher = cs
+	return tred.NewWorker(conf)
 }

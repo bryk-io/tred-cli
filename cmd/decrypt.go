@@ -1,24 +1,24 @@
 package cmd
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/bryk-io/x/crypto/tred"
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 	"io"
-	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
-	"time"
+
+	"github.com/bryk-io/x/crypto/tred"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 var decryptCmd = &cobra.Command{
 	Use:           "decrypt input",
 	Aliases:       []string{"dec", "open"},
+	Example:       "tred decrypt -dr -c chacha [INPUT]",
 	Short:         "Decrypt provided file or directory",
 	RunE:          runDecrypt,
 	SilenceErrors: true,
@@ -27,68 +27,76 @@ var decryptCmd = &cobra.Command{
 
 func init() {
 	var (
-		cipher string
-		suffix string
-		report string
-		clean  bool
-		silent bool
+		err       error
+		cipher    string
+		suffix    string
+		clean     bool
+		silent    bool
+		recursive bool
 	)
-	decryptCmd.Flags().StringVar(&cipher, "cipher", "aes", "cipher suite to use, 'aes' or 'chacha'")
+	decryptCmd.Flags().StringVarP(&cipher, "cipher", "c", "aes", "cipher suite to use, 'aes' or 'chacha'")
 	decryptCmd.Flags().StringVar(&suffix, "suffix", "_enc", "suffix to remove from encrypted files")
-	decryptCmd.Flags().StringVar(&report, "report", "", "validate input against a JSON report")
-	decryptCmd.Flags().BoolVar(&clean, "clean", false, "remove sealed files after decrypt")
-	decryptCmd.Flags().BoolVar(&silent, "silent", false, "suppress all output")
-	viper.BindPFlag("decrypt.cipher", decryptCmd.Flags().Lookup("cipher"))
-	viper.BindPFlag("decrypt.clean", decryptCmd.Flags().Lookup("clean"))
-	viper.BindPFlag("decrypt.silent", decryptCmd.Flags().Lookup("silent"))
-	viper.BindPFlag("decrypt.suffix", decryptCmd.Flags().Lookup("suffix"))
-	viper.BindPFlag("decrypt.report", decryptCmd.Flags().Lookup("report"))
+	decryptCmd.Flags().BoolVarP(&clean, "clean", "d", false, "remove sealed files after decrypt")
+	decryptCmd.Flags().BoolVarP(&silent, "silent", "s", false, "suppress all output")
+	decryptCmd.Flags().BoolVarP(&recursive, "recursive", "r", false, "recursively process directories")
+	err = viper.BindPFlag("decrypt.cipher", decryptCmd.Flags().Lookup("cipher"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = viper.BindPFlag("decrypt.clean", decryptCmd.Flags().Lookup("clean"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = viper.BindPFlag("decrypt.silent", decryptCmd.Flags().Lookup("silent"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = viper.BindPFlag("decrypt.suffix", decryptCmd.Flags().Lookup("suffix"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = viper.BindPFlag("decrypt.recursive", decryptCmd.Flags().Lookup("recursive"))
+	if err != nil {
+		log.Fatal(err)
+	}
 	rootCmd.AddCommand(decryptCmd)
 }
 
-func decryptFile(w *tred.Worker, file string, withBar bool) (string, []byte, error) {
-	input, err := os.Open(file)
+func decryptFile(w *tred.Worker, file string, withBar bool) error {
+	input, err := os.Open(filepath.Clean(file))
 	if err != nil {
-		return "", nil, err
+		return err
 	}
 	defer input.Close()
 
 	output, err := os.Create(strings.Replace(file, viper.GetString("decrypt.suffix"), "", 1))
 	if err != nil {
-		return "", nil, err
+		return err
 	}
 	defer output.Close()
 
 	var r io.Reader
 	r = input
 	if !viper.GetBool("encrypt.silent") && withBar {
-		info, _ := input.Stat()
+		info, err := input.Stat()
+		if err != nil {
+			return err
+		}
 		bar := getProgressBar(info)
 		bar.Start()
 		defer bar.Finish()
 		r = bar.NewProxyReader(input)
 	}
-	res, err := w.Decrypt(r, output)
+	_, err = w.Decrypt(r, output)
 	if err == nil {
 		if viper.GetBool("decrypt.clean") {
 			defer os.Remove(file)
 		}
 	} else {
-		os.Remove(output.Name())
-		return "", nil, err
+		defer os.Remove(output.Name())
+		return err
 	}
-	return filepath.Base(output.Name()), res.Checksum, err
-}
-
-func validateEntry(index map[string]string, file, checksum string) bool {
-	if len(index) > 0 {
-		if _, ok := index[file]; ok {
-			if index[file] != checksum {
-				return false
-			}
-		}
-	}
-	return true
+	return err
 }
 
 func runDecrypt(_ *cobra.Command, args []string) error {
@@ -98,24 +106,9 @@ func runDecrypt(_ *cobra.Command, args []string) error {
 	}
 
 	// Get input absolute path
-	path, err := filepath.Abs(args[0])
+	input, err := filepath.Abs(args[0])
 	if err != nil {
 		return err
-	}
-	info, err := os.Stat(path)
-	if err != nil {
-		return err
-	}
-
-	// Get cipher suite
-	var cs byte
-	switch viper.GetString("decrypt.cipher") {
-	case "aes":
-		cs = tred.AES_GCM
-	case "chacha":
-		cs = tred.CHACHA20
-	default:
-		return errors.New("invalid cipher suite")
 	}
 
 	// Get encryption key
@@ -125,79 +118,52 @@ func runDecrypt(_ *cobra.Command, args []string) error {
 	}
 
 	// Get worker instance
-	conf := tred.DefaultConfig(key)
-	conf.Cipher = cs
-	w, err := tred.NewWorker(conf)
+	w, err := getWorker(key, viper.GetString("decrypt.cipher"))
 	if err != nil {
 		return err
 	}
-	fmt.Printf("\n")
-
-	// Load index if provided
-	index := make(map[string]string)
-	if viper.GetString("decrypt.report") != "" {
-		rp, err := filepath.Abs(viper.GetString("decrypt.report"))
-		if err != nil {
-			return err
-		}
-		rf, err := ioutil.ReadFile(rp)
-		if err != nil {
-			return err
-		}
-		err = json.Unmarshal(rf, &index)
-		if err != nil {
-			return err
-		}
-	}
 
 	// Process input
-	report := make(map[string]string)
-	start := time.Now()
-	if info.IsDir() {
-		// Process all files inside the input directory
-		files, err := ioutil.ReadDir(path)
-		if err != nil {
-			return err
-		}
-
+	if isDir(input) {
 		wg := sync.WaitGroup{}
-		for _, file := range files {
-			if !file.IsDir() && !strings.HasPrefix(file.Name(), ".") {
-				wg.Add(1)
-				go func(file os.FileInfo, report map[string]string) {
-					f, checksum, err := decryptFile(w, filepath.Join(path, file.Name()), false)
-					if err == nil {
-						digest := fmt.Sprintf("%x", checksum)
-						if !validateEntry(index, f, digest) {
-							fmt.Printf("invalid checksum value for entry: %s\n", f)
-						}
-						if !viper.GetBool("decrypt.silent") {
-							fmt.Printf(">> %s\n", f)
-						}
-						report[f] = digest
-					} else {
-						fmt.Printf("ERROR: %s for: %s\n", err, file.Name())
-					}
-					wg.Done()
-				}(file, report)
+		err := filepath.Walk(input, func(f string, i os.FileInfo, err error) error {
+			// Unexpected error walking the directory
+			if err != nil {
+				return err
 			}
-		}
+
+			// Ignore hidden files
+			if strings.HasPrefix(filepath.Base(f), ".") {
+				return nil
+			}
+
+			// Don't go into sub-directories if not required
+			if i.IsDir() && !viper.GetBool("decrypt.recursive") {
+				return filepath.SkipDir
+			}
+
+			// Ignore subdir markers
+			if i.IsDir() {
+				return nil
+			}
+
+			// Process regular files
+			wg.Add(1)
+			go func(entry string) {
+				if err := decryptFile(w, entry, false); err != nil {
+					fmt.Printf("ERROR: %s for: %s\n", err, entry)
+				}
+				if !viper.GetBool("decrypt.silent") {
+					fmt.Printf(">> %s\n", entry)
+				}
+				wg.Done()
+			}(f)
+			return nil
+		})
 		wg.Wait()
-	} else {
-		// Process single file
-		file, checksum, err := decryptFile(w, path, true)
-		if err != nil {
-			return err
-		}
-		digest := fmt.Sprintf("%x", checksum)
-		if !validateEntry(index, file, digest) {
-			fmt.Printf("invalid checksum value for entry: %s\n", file)
-		}
-		report[file] = digest
+		return err
 	}
 
-	if !viper.GetBool("decrypt.silent") {
-		fmt.Printf("=== Done in: %v\n", time.Since(start))
-	}
-	return nil
+	// Process single file
+	return decryptFile(w, input, true)
 }

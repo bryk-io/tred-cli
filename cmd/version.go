@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+
 	"github.com/spf13/cobra"
 )
 
@@ -17,9 +18,9 @@ var versionCmd = &cobra.Command{
 	Aliases: []string{"info"},
 	Short:   "Show version information",
 	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Println("Home: https://github.com/bryk-io/tred-cli")
 		fmt.Println("Release:", releaseTag)
 		fmt.Println("Build Code:", buildCode)
-		fmt.Println("Home: https://github.com/bryk-io/tred-cli")
 	},
 }
 
