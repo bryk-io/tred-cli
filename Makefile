@@ -2,19 +2,19 @@ default: help
 FILES_LIST=`find . -iname '*.go' | grep -v 'vendor'`
 GO_PKG_LIST=`go list ./... | grep -v 'vendor'`
 BINARY_NAME=tred
+VERSION_TAG=0.2.0
 LD_FLAGS="\
 -X github.com/bryk-io/tred-cli/cmd.buildCode=`git log --pretty=format:'%H' -n1` \
--X github.com/bryk-io/tred-cli/cmd.releaseTag=0.2.0 \
-"
+-X github.com/bryk-io/tred-cli/cmd.releaseTag=$(VERSION_TAG)"
 
 build: ## Build for the default architecture in use
 	go build -v -ldflags $(LD_FLAGS) -o $(BINARY_NAME)
 
 linux: ## Build for linux systems
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -v -ldflags $(LD_FLAGS) -o $(BINARY_NAME)_linux
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -v -ldflags $(LD_FLAGS) -o $(BINARY_NAME)-linux
 
 clean: ## Download and compile all dependencies and intermediary products
-	dep ensure -v
+	go mod tidy
 
 install: ## Install the binary to '$GOPATH/bin'
 	go build -v -ldflags $(LD_FLAGS) -i -o ${GOPATH}/bin/$(BINARY_NAME)
@@ -28,7 +28,7 @@ test: ## Run all tests excluding the vendor dependencies
 
 	# Static analysis
 	ineffassign $(FILES_LIST)
-	gosec $(GO_PKG_LIST)
+	GO111MODULE=off gosec $(GO_PKG_LIST)
 	gocyclo -over 15 `find . -iname '*.go' | grep -v 'vendor' | grep -v '_test.go' | grep -v 'pb.go'`
 
 help: ## Display available make targets
