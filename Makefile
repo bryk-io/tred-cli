@@ -2,7 +2,7 @@ default: help
 FILES_LIST=`find . -iname '*.go' | grep -v 'vendor'`
 GO_PKG_LIST=`go list ./... | grep -v 'vendor'`
 BINARY_NAME=tred
-VERSION_TAG=0.2.0
+VERSION_TAG=0.3.0
 LD_FLAGS="\
 -X github.com/bryk-io/tred-cli/cmd.buildCode=`git log --pretty=format:'%H' -n1` \
 -X github.com/bryk-io/tred-cli/cmd.releaseTag=$(VERSION_TAG)"
@@ -11,7 +11,14 @@ build: ## Build for the default architecture in use
 	go build -v -ldflags $(LD_FLAGS) -o $(BINARY_NAME)
 
 linux: ## Build for linux systems
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -v -ldflags $(LD_FLAGS) -o $(BINARY_NAME)-linux
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -v -ldflags $(LD_FLAGS) -o $(BINARY_NAME)-$(VERSION_TAG)-linux_64bit
+
+windows: ## Build for windows systems
+	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -v -ldflags $(LD_FLAGS) -o $(BINARY_NAME)-$(VERSION_TAG)-windows_64bit.exe
+	CGO_ENABLED=0 GOOS=windows GOARCH=386 go build -v -ldflags $(LD_FLAGS) -o $(BINARY_NAME)-$(VERSION_TAG)-windows_32bit.exe
+
+mac: ## Build for MacOS systems
+	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -v -ldflags $(LD_FLAGS) -o $(BINARY_NAME)-$(VERSION_TAG)-mac
 
 clean: ## Download and compile all dependencies and intermediary products
 	go mod tidy

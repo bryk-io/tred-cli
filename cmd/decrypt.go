@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -33,30 +34,30 @@ func init() {
 		clean     bool
 		silent    bool
 		recursive bool
+		keyFile   string
 	)
 	decryptCmd.Flags().StringVarP(&cipher, "cipher", "c", "aes", "cipher suite to use, 'aes' or 'chacha'")
 	decryptCmd.Flags().StringVar(&suffix, "suffix", "_enc", "suffix to remove from encrypted files")
+	decryptCmd.Flags().StringVarP(&keyFile, "key", "k", "", "load decryption key from an existing file")
 	decryptCmd.Flags().BoolVarP(&clean, "clean", "d", false, "remove sealed files after decrypt")
 	decryptCmd.Flags().BoolVarP(&silent, "silent", "s", false, "suppress all output")
 	decryptCmd.Flags().BoolVarP(&recursive, "recursive", "r", false, "recursively process directories")
-	err = viper.BindPFlag("decrypt.cipher", decryptCmd.Flags().Lookup("cipher"))
-	if err != nil {
+	if err = viper.BindPFlag("decrypt.cipher", decryptCmd.Flags().Lookup("cipher")); err != nil {
 		log.Fatal(err)
 	}
-	err = viper.BindPFlag("decrypt.clean", decryptCmd.Flags().Lookup("clean"))
-	if err != nil {
+	if err = viper.BindPFlag("decrypt.clean", decryptCmd.Flags().Lookup("clean")); err != nil {
 		log.Fatal(err)
 	}
-	err = viper.BindPFlag("decrypt.silent", decryptCmd.Flags().Lookup("silent"))
-	if err != nil {
+	if err = viper.BindPFlag("decrypt.silent", decryptCmd.Flags().Lookup("silent")); err != nil {
 		log.Fatal(err)
 	}
-	err = viper.BindPFlag("decrypt.suffix", decryptCmd.Flags().Lookup("suffix"))
-	if err != nil {
+	if err = viper.BindPFlag("decrypt.suffix", decryptCmd.Flags().Lookup("suffix")); err != nil {
 		log.Fatal(err)
 	}
-	err = viper.BindPFlag("decrypt.recursive", decryptCmd.Flags().Lookup("recursive"))
-	if err != nil {
+	if err = viper.BindPFlag("decrypt.recursive", decryptCmd.Flags().Lookup("recursive")); err != nil {
+		log.Fatal(err)
+	}
+	if err = viper.BindPFlag("decrypt.key", decryptCmd.Flags().Lookup("key")); err != nil {
 		log.Fatal(err)
 	}
 	rootCmd.AddCommand(decryptCmd)
@@ -111,10 +112,16 @@ func runDecrypt(_ *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Get encryption key
-	key, err := secureAsk("\nEncryption Key: ")
-	if err != nil {
-		return err
+	// Get decryption key
+	var key []byte
+	if viper.GetString("decrypt.key") != "" {
+		if key, err = ioutil.ReadFile(viper.GetString("decrypt.key")); err != nil {
+			return err
+		}
+	} else {
+		if key, err = secureAsk("\nDecryption Key: "); err != nil {
+			return err
+		}
 	}
 
 	// Get worker instance

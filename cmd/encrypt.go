@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -30,33 +31,33 @@ func init() {
 		err       error
 		cipher    string
 		suffix    string
+		keyFile   string
 		clean     bool
 		silent    bool
 		recursive bool
 	)
 	encryptCmd.Flags().StringVarP(&cipher, "cipher", "c", "aes", "cipher suite to use, 'aes' or 'chacha'")
 	encryptCmd.Flags().StringVar(&suffix, "suffix", "_enc", "suffix to add on encrypted files")
+	encryptCmd.Flags().StringVarP(&keyFile, "key", "k", "", "load encryption key from an existing file")
 	encryptCmd.Flags().BoolVarP(&clean, "clean", "d", false, "remove original files after encrypt")
 	encryptCmd.Flags().BoolVarP(&silent, "silent", "s", false, "suppress all output")
 	encryptCmd.Flags().BoolVarP(&recursive, "recursive", "r", false, "recursively process directories")
-	err = viper.BindPFlag("encrypt.cipher", encryptCmd.Flags().Lookup("cipher"))
-	if err != nil {
+	if err = viper.BindPFlag("encrypt.cipher", encryptCmd.Flags().Lookup("cipher")); err != nil {
 		log.Fatal(err)
 	}
-	err = viper.BindPFlag("encrypt.clean", encryptCmd.Flags().Lookup("clean"))
-	if err != nil {
+	if err = viper.BindPFlag("encrypt.clean", encryptCmd.Flags().Lookup("clean")); err != nil {
 		log.Fatal(err)
 	}
-	err = viper.BindPFlag("encrypt.silent", encryptCmd.Flags().Lookup("silent"))
-	if err != nil {
+	if err = viper.BindPFlag("encrypt.silent", encryptCmd.Flags().Lookup("silent")); err != nil {
 		log.Fatal(err)
 	}
-	err = viper.BindPFlag("encrypt.suffix", encryptCmd.Flags().Lookup("suffix"))
-	if err != nil {
+	if err = viper.BindPFlag("encrypt.suffix", encryptCmd.Flags().Lookup("suffix")); err != nil {
 		log.Fatal(err)
 	}
-	err = viper.BindPFlag("encrypt.recursive", encryptCmd.Flags().Lookup("recursive"))
-	if err != nil {
+	if err = viper.BindPFlag("encrypt.recursive", encryptCmd.Flags().Lookup("recursive")); err != nil {
+		log.Fatal(err)
+	}
+	if err = viper.BindPFlag("encrypt.key", encryptCmd.Flags().Lookup("key")); err != nil {
 		log.Fatal(err)
 	}
 	rootCmd.AddCommand(encryptCmd)
@@ -109,9 +110,15 @@ func runEncrypt(_ *cobra.Command, args []string) error {
 	}
 
 	// Get encryption key
-	key, err := getInteractiveKey()
-	if err != nil {
-		return err
+	var key []byte
+	if viper.GetString("encrypt.key") != "" {
+		if key, err = ioutil.ReadFile(viper.GetString("encrypt.key")); err != nil {
+			return err
+		}
+	} else {
+		if key, err = getInteractiveKey(); err != nil {
+			return err
+		}
 	}
 
 	// Get worker instance
