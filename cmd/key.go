@@ -5,16 +5,16 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"io"
-	"log"
 	"os"
 
+	"github.com/bryk-io/x/cli"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
 var keyCmd = &cobra.Command{
 	Use:     "key",
-	Example: "tred key -s 128",
+	Example: "tred key --encode",
 	Short:   "Generate a random and secure key value",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// Generate
@@ -37,15 +37,22 @@ var keyCmd = &cobra.Command{
 }
 
 func init() {
-	size := 128
-	b64 := false
-	keyCmd.Flags().IntVarP(&size, "size", "s", size, "size (in bytes) for the key value")
-	keyCmd.Flags().BoolVarP(&b64, "encode", "e", b64, "encode the key in base64")
-	if err := viper.BindPFlag("key.size", keyCmd.Flags().Lookup("size")); err != nil {
-		log.Fatal(err)
+	params := []cli.Param{
+		{
+			Name:      "size",
+			Usage:     "size (in bytes) for the key value",
+			FlagKey:   "key.size",
+			ByDefault: 128,
+		},
+		{
+			Name:      "encode",
+			Usage:     "encode the key in base64",
+			FlagKey:   "key.encode",
+			ByDefault: false,
+		},
 	}
-	if err := viper.BindPFlag("key.encode", keyCmd.Flags().Lookup("encode")); err != nil {
-		log.Fatal(err)
+	if err := cli.SetupCommandParams(keyCmd, params); err != nil {
+		panic(err)
 	}
 	rootCmd.AddCommand(keyCmd)
 }

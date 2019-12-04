@@ -1,64 +1,71 @@
 package cmd
 
 import (
-	"errors"
-	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
+	"github.com/bryk-io/x/cli"
 	"github.com/bryk-io/x/crypto/tred"
+	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
 var decryptCmd = &cobra.Command{
-	Use:           "decrypt input",
-	Aliases:       []string{"dec", "open"},
-	Example:       "tred decrypt -dr -c chacha [INPUT]",
-	Short:         "Decrypt provided file or directory",
-	RunE:          runDecrypt,
-	SilenceErrors: true,
-	SilenceUsage:  true,
+	Use:     "decrypt input",
+	Aliases: []string{"dec", "open"},
+	Example: "tred decrypt --cipher chacha --clean --recursive [INPUT]",
+	Short:   "Decrypt provided file or directory",
+	RunE:    runDecrypt,
 }
 
 func init() {
-	var (
-		err       error
-		cipher    string
-		suffix    string
-		clean     bool
-		silent    bool
-		recursive bool
-		keyFile   string
-	)
-	decryptCmd.Flags().StringVarP(&cipher, "cipher", "c", "aes", "cipher suite to use, 'aes' or 'chacha'")
-	decryptCmd.Flags().StringVar(&suffix, "suffix", "_enc", "suffix to remove from encrypted files")
-	decryptCmd.Flags().StringVarP(&keyFile, "key", "k", "", "load decryption key from an existing file")
-	decryptCmd.Flags().BoolVarP(&clean, "clean", "d", false, "remove sealed files after decrypt")
-	decryptCmd.Flags().BoolVarP(&silent, "silent", "s", false, "suppress all output")
-	decryptCmd.Flags().BoolVarP(&recursive, "recursive", "r", false, "recursively process directories")
-	if err = viper.BindPFlag("decrypt.cipher", decryptCmd.Flags().Lookup("cipher")); err != nil {
-		log.Fatal(err)
+	params := []cli.Param{
+		{
+			Name:      "cipher",
+			Usage:     "cipher suite to use, 'aes' or 'chacha'",
+			ByDefault: "aes",
+			FlagKey:   "decrypt.cipher",
+		},
+		{
+			Name:      "suffix",
+			Usage:     "suffix to remove from encrypted files",
+			ByDefault: "_enc",
+			FlagKey:   "decrypt.suffix",
+		},
+		{
+			Name:      "key",
+			Usage:     "load decryption key from an existing file",
+			ByDefault: "",
+			FlagKey:   "decrypt.key",
+		},
+		{
+			Name:      "clean",
+			Usage:     "remove sealed files after decryption",
+			ByDefault: false,
+			FlagKey:   "decrypt.clean",
+		},
+		{
+			Name:      "silent",
+			Usage:     "suppress all output",
+			ByDefault: false,
+			FlagKey:   "decrypt.silent",
+		},
+		{
+			Name:      "recursive",
+			Usage:     "recursively process directories",
+			ByDefault: false,
+			FlagKey:   "decrypt.recursive",
+		},
 	}
-	if err = viper.BindPFlag("decrypt.clean", decryptCmd.Flags().Lookup("clean")); err != nil {
-		log.Fatal(err)
-	}
-	if err = viper.BindPFlag("decrypt.silent", decryptCmd.Flags().Lookup("silent")); err != nil {
-		log.Fatal(err)
-	}
-	if err = viper.BindPFlag("decrypt.suffix", decryptCmd.Flags().Lookup("suffix")); err != nil {
-		log.Fatal(err)
-	}
-	if err = viper.BindPFlag("decrypt.recursive", decryptCmd.Flags().Lookup("recursive")); err != nil {
-		log.Fatal(err)
-	}
-	if err = viper.BindPFlag("decrypt.key", decryptCmd.Flags().Lookup("key")); err != nil {
-		log.Fatal(err)
+	if err := cli.SetupCommandParams(decryptCmd, params); err != nil {
+		panic(err)
 	}
 	rootCmd.AddCommand(decryptCmd)
 }
@@ -68,13 +75,17 @@ func decryptFile(w *tred.Worker, file string, withBar bool) error {
 	if err != nil {
 		return err
 	}
-	defer input.Close()
+	defer func() {
+		_ = input.Close()
+	}()
 
 	output, err := os.Create(strings.Replace(file, viper.GetString("decrypt.suffix"), "", 1))
 	if err != nil {
 		return err
 	}
-	defer output.Close()
+	defer func() {
+		_ = output.Close()
+	}()
 
 	var r io.Reader
 	r = input
@@ -91,24 +102,32 @@ func decryptFile(w *tred.Worker, file string, withBar bool) error {
 	_, err = w.Decrypt(r, output)
 	if err == nil {
 		if viper.GetBool("decrypt.clean") {
-			defer os.Remove(file)
+			defer func() {
+				_ = os.Remove(file)
+			}()
 		}
 	} else {
-		defer os.Remove(output.Name())
+		defer func() {
+			_ = os.Remove(output.Name())
+		}()
 		return err
 	}
 	return err
 }
 
 func runDecrypt(_ *cobra.Command, args []string) error {
+	log := getLogger(viper.GetBool("decrypt.silent"))
+
 	// Get input
 	if len(args) == 0 {
+		log.Fatal("missing required input")
 		return errors.New("missing required input")
 	}
 
 	// Get input absolute path
 	input, err := filepath.Abs(args[0])
 	if err != nil {
+		log.WithField("error", err).Fatal("invalid source provided")
 		return err
 	}
 
@@ -116,10 +135,13 @@ func runDecrypt(_ *cobra.Command, args []string) error {
 	var key []byte
 	if viper.GetString("decrypt.key") != "" {
 		if key, err = ioutil.ReadFile(viper.GetString("decrypt.key")); err != nil {
+			log.WithField("error", err).Fatal("could not read key file provided")
 			return err
 		}
 	} else {
-		if key, err = secureAsk("\nDecryption Key: "); err != nil {
+		log.Info("no key file provided, asking for a secret key now")
+		if key, err = secureAsk("Decryption Key: \n"); err != nil {
+			log.WithField("error", err).Fatal("failed to retrieve key")
 			return err
 		}
 	}
@@ -127,25 +149,37 @@ func runDecrypt(_ *cobra.Command, args []string) error {
 	// Get worker instance
 	w, err := getWorker(key, viper.GetString("decrypt.cipher"))
 	if err != nil {
+		log.WithField("error", err).Fatal("could not initialize TRED worker")
 		return err
 	}
 
 	// Process input
+	start := time.Now()
 	if isDir(input) {
 		wg := sync.WaitGroup{}
 		err := filepath.Walk(input, func(f string, i os.FileInfo, err error) error {
 			// Unexpected error walking the directory
 			if err != nil {
+				log.WithFields(logrus.Fields{
+					"location": f,
+					"error":    err,
+				}).Warn("failed to traverse location")
 				return err
 			}
 
 			// Ignore hidden files
 			if strings.HasPrefix(filepath.Base(f), ".") {
+				log.WithFields(logrus.Fields{
+					"location": f,
+				}).Debug("ignoring hidden file")
 				return nil
 			}
 
 			// Don't go into sub-directories if not required
 			if i.IsDir() && !viper.GetBool("decrypt.recursive") {
+				log.WithFields(logrus.Fields{
+					"location": f,
+				}).Debug("ignoring directory on non-recursive run")
 				return filepath.SkipDir
 			}
 
@@ -156,21 +190,28 @@ func runDecrypt(_ *cobra.Command, args []string) error {
 
 			// Process regular files
 			wg.Add(1)
-			go func(entry string) {
+			go func(entry string, i os.FileInfo) {
 				if err := decryptFile(w, entry, false); err != nil {
-					fmt.Printf("ERROR: %s for: %s\n", err, entry)
-				}
-				if !viper.GetBool("decrypt.silent") {
-					fmt.Printf(">> %s\n", entry)
+					log.WithFields(logrus.Fields{
+						"file":  i.Name(),
+						"error": err,
+					}).Error("failed to decrypt file")
+				} else {
+					log.WithFields(logrus.Fields{
+						"file": i.Name(),
+					}).Debug("file decrypted")
 				}
 				wg.Done()
-			}(f)
+			}(f, i)
 			return nil
 		})
 		wg.Wait()
+		log.WithFields(logrus.Fields{"time": time.Since(start)}).Info("operation completed")
 		return err
 	}
 
 	// Process single file
-	return decryptFile(w, input, true)
+	err = decryptFile(w, input, true)
+	log.WithFields(logrus.Fields{"time": time.Since(start)}).Info("operation completed")
+	return err
 }

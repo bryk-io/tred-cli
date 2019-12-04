@@ -5,6 +5,9 @@
 # Builds
 tred
 tred-*
+tredctl
+tredctl-*
+release-*
 
 # Deps
 vendor/**

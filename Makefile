@@ -1,42 +1,45 @@
 default: help
-FILES_LIST=`find . -iname '*.go' | grep -v 'vendor'`
-GO_PKG_LIST=`go list ./... | grep -v 'vendor'`
 BINARY_NAME=tred
-VERSION_TAG=0.3.0
+VERSION_TAG=0.4.0
 LD_FLAGS="\
 -X github.com/bryk-io/tred-cli/cmd.buildCode=`git log --pretty=format:'%H' -n1` \
 -X github.com/bryk-io/tred-cli/cmd.releaseTag=$(VERSION_TAG)"
 
-build: ## Build for the default architecture in use
-	go build -v -ldflags $(LD_FLAGS) -o $(BINARY_NAME)
+help: ## Display available make targets
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[33m%-16s\033[0m %s\n", $$1, $$2}'
 
-linux: ## Build for linux systems
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -v -ldflags $(LD_FLAGS) -o $(BINARY_NAME)-$(VERSION_TAG)-linux_64bit
-
-windows: ## Build for windows systems
-	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -v -ldflags $(LD_FLAGS) -o $(BINARY_NAME)-$(VERSION_TAG)-windows_64bit.exe
-	CGO_ENABLED=0 GOOS=windows GOARCH=386 go build -v -ldflags $(LD_FLAGS) -o $(BINARY_NAME)-$(VERSION_TAG)-windows_32bit.exe
-
-mac: ## Build for MacOS systems
-	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -v -ldflags $(LD_FLAGS) -o $(BINARY_NAME)-$(VERSION_TAG)-mac
+updates: ## List available updates for direct dependencies
+	# https://github.com/golang/go/wiki/Modules#how-to-upgrade-and-downgrade-dependencies
+	go list -u -f '{{if (and (not (or .Main .Indirect)) .Update)}}{{.Path}}: {{.Version}} -> {{.Update.Version}}{{end}}' -m all 2> /dev/null
 
 clean: ## Download and compile all dependencies and intermediary products
 	go mod tidy
+	go mod download
+	go mod verify
+
+test: ## Run all tests excluding the vendor dependencies
+	# Static analysis
+	golangci-lint run -v ./...
+	go-consistent -v ./...
+
+	# Unit tests
+	go test -race -cover -v ./...
+
+build: ## Build for the default architecture in use
+	go build -v -ldflags $(LD_FLAGS) -o $(BINARY_NAME)
 
 install: ## Install the binary to '$GOPATH/bin'
 	go build -v -ldflags $(LD_FLAGS) -i -o ${GOPATH}/bin/$(BINARY_NAME)
 
-test: ## Run all tests excluding the vendor dependencies
-	# Formatting
-	go vet $(GO_PKG_LIST)
-	gofmt -s -l $(FILES_LIST)
-	golint -set_exit_status $(GO_PKG_LIST)
-	misspell $(FILES_LIST)
+build-for: ## Build the availabe binaries for the specified 'os' and 'arch'
+	CGO_ENABLED=0 GOOS=$(os) GOARCH=$(arch) \
+	go build -v -ldflags $(LD_FLAGS) \
+	-o $(dest)$(BINARY_NAME)_$(VERSION_TAG)_$(os)_$(arch)$(suffix)
 
-	# Static analysis
-	ineffassign $(FILES_LIST)
-	GO111MODULE=off gosec $(GO_PKG_LIST)
-	gocyclo -over 15 `find . -iname '*.go' | grep -v 'vendor' | grep -v '_test.go' | grep -v 'pb.go'`
-
-help: ## Display available make targets
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[33m%-16s\033[0m %s\n", $$1, $$2}'
+release: ## Prepare the artifacts for a new release
+	@-rm -rf release-$(VERSION_TAG)
+	mkdir release-$(VERSION_TAG)
+	make build-for os=linux arch=amd64 dest=release-$(VERSION_TAG)/
+	make build-for os=darwin arch=amd64 dest=release-$(VERSION_TAG)/
+	make build-for os=windows arch=amd64 suffix=".exe" dest=release-$(VERSION_TAG)/
+	make build-for os=windows arch=386 suffix=".exe" dest=release-$(VERSION_TAG)/

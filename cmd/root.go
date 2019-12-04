@@ -2,14 +2,18 @@ package cmd
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/bryk-io/x/crypto/tred"
 	"github.com/cheggaaa/pb"
+	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	prefixed "github.com/x-cray/logrus-prefixed-formatter"
 	"golang.org/x/crypto/ssh/terminal"
 )
 
@@ -34,11 +38,11 @@ func secureAsk(prompt string) ([]byte, error) {
 
 // Ask the user to enter a key phrase that will be used to expand a secure cryptographic key
 func getInteractiveKey() ([]byte, error) {
-	key, err := secureAsk("\nEncryption Key: ")
+	key, err := secureAsk("Encryption Key: ")
 	if err != nil {
 		return nil, err
 	}
-	confirmation, err := secureAsk("\nConfirm Key: ")
+	confirmation, err := secureAsk("\nConfirm Key: \n")
 	if err != nil {
 		return nil, err
 	}
@@ -86,4 +90,17 @@ func getWorker(key []byte, cipher string) (*tred.Worker, error) {
 	}
 	conf.Cipher = cs
 	return tred.NewWorker(conf)
+}
+
+func getLogger(silent bool) *logrus.Logger {
+	ll := logrus.New()
+	ll.Level = logrus.DebugLevel
+	ll.Formatter = &prefixed.TextFormatter{
+		FullTimestamp:   true,
+		TimestampFormat: time.StampMilli,
+	}
+	if silent {
+		ll.Out = ioutil.Discard
+	}
+	return ll
 }

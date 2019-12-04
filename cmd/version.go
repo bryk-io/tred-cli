@@ -8,7 +8,7 @@ import (
 
 // Set at compile time in the Makefile
 var (
-	buildCode string
+	buildCode  string
 	releaseTag string
 )
 
