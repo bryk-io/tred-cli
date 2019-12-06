@@ -360,9 +360,10 @@ execute() {
   # Integrity checks
   log_debug "verifying checksum"
   hash_sha256_verify "${tmpdir}/${target_bin}" "${tmpdir}/${target_bin}.sha256sum"
-  log_debug "verifying digital signature"
-  chmod 755 "${srcdir}/${target_bin}"
-  "${srcdir}/${target_bin}" verify "${srcdir}/${target_bin}".'sig.json' < "${srcdir}/${target_bin}.sha256sum"
+  if is_command didctl; then
+    log_debug "verifying digital signature"
+    didctl verify "${srcdir}/${target_bin}".'sig.json' < "${srcdir}/${target_bin}.sha256sum"
+  fi
 
   # Install
   install -d "${BINDIR}"
