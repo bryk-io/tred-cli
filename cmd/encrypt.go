@@ -10,12 +10,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bryk-io/x/cli"
-	"github.com/bryk-io/x/crypto/tred"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"go.bryk.io/x/cli"
+	"go.bryk.io/x/crypto/tred"
 )
 
 var encryptCmd = &cobra.Command{

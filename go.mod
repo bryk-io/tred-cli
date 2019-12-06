@@ -3,7 +3,6 @@ module github.com/bryk-io/tred-cli
 go 1.13
 
 require (
-	github.com/bryk-io/x v0.0.0-20191204195426-eb9caa73b7c7
 	github.com/cheggaaa/pb v1.0.25
 	github.com/fatih/color v1.7.0 // indirect
 	github.com/mattn/go-colorable v0.1.1 // indirect
@@ -14,6 +13,7 @@ require (
 	github.com/spf13/cobra v0.0.5
 	github.com/spf13/viper v1.5.0
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2
+	go.bryk.io/x v0.0.0-20191206191545-f9a10f6a12ad
 	golang.org/x/crypto v0.0.0-20190927123631-a832865fa7ad
 	gopkg.in/cheggaaa/pb.v1 v1.0.27 // indirect
 )

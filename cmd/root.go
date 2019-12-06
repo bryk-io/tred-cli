@@ -8,12 +8,12 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/bryk-io/x/crypto/tred"
 	"github.com/cheggaaa/pb"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	prefixed "github.com/x-cray/logrus-prefixed-formatter"
+	"go.bryk.io/x/crypto/tred"
 	"golang.org/x/crypto/ssh/terminal"
 )
 
