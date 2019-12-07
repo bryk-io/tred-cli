@@ -13,7 +13,7 @@ require (
 	github.com/spf13/cobra v0.0.5
 	github.com/spf13/viper v1.5.0
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2
-	go.bryk.io/x v0.0.0-20191206191545-f9a10f6a12ad
+	go.bryk.io/x v0.0.0-20191207160318-b8cf3c7fc922
 	golang.org/x/crypto v0.0.0-20190927123631-a832865fa7ad
 	gopkg.in/cheggaaa/pb.v1 v1.0.27 // indirect
 )

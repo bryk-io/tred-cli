@@ -235,6 +235,8 @@ github.com/zmap/zcrypto v0.0.0-20190729165852-9051775e6a2e/go.mod h1:w7kd3qXHh8F
 github.com/zmap/zlint v0.0.0-20190806154020-fd021b4cfbeb/go.mod h1:29UiAJNsiVdvTBFCJW8e3q6dcDbOoPkhMgttOSCIMMY=
 go.bryk.io/x v0.0.0-20191206191545-f9a10f6a12ad h1:g//ITEbtXNzVSpZoM7srRY+8Q/K3RwslrD1IdN4UFpE=
 go.bryk.io/x v0.0.0-20191206191545-f9a10f6a12ad/go.mod h1:ZvaCbESYzjTCDvkFi74U1JyIPz65HJ/qG8xPBlTBBW4=
+go.bryk.io/x v0.0.0-20191207160318-b8cf3c7fc922 h1:cb8e5Mwi0ppAbqS1g77YyM24eu2TP9yFCOcqCVZPzxQ=
+go.bryk.io/x v0.0.0-20191207160318-b8cf3c7fc922/go.mod h1:ZvaCbESYzjTCDvkFi74U1JyIPz65HJ/qG8xPBlTBBW4=
 go.etcd.io/bbolt v1.3.2/go.mod h1:IbVyRI1SCnLcuJnV2u8VeU0CEYM7e686BmAb1XKL+uU=
 go.uber.org/atomic v1.4.0/go.mod h1:gD2HeocX3+yG+ygLZcrzQJaqmWj9AIm7n08wl/qW/PE=
 go.uber.org/multierr v1.1.0/go.mod h1:wR5kodmAFQ0UK8QlbwjlSNy0Z68gJhDJUG5sjR94q/0=

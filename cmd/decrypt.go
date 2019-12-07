@@ -20,7 +20,7 @@ import (
 var decryptCmd = &cobra.Command{
 	Use:     "decrypt input",
 	Aliases: []string{"dec", "open"},
-	Example: "tred decrypt --cipher chacha --clean --recursive [INPUT]",
+	Example: "tred decrypt --cipher chacha -cr [INPUT]",
 	Short:   "Decrypt provided file or directory",
 	RunE:    runDecrypt,
 }
@@ -50,18 +50,21 @@ func init() {
 			Usage:     "remove sealed files after decryption",
 			ByDefault: false,
 			FlagKey:   "decrypt.clean",
+			Short:     "c",
 		},
 		{
 			Name:      "silent",
 			Usage:     "suppress all output",
 			ByDefault: false,
 			FlagKey:   "decrypt.silent",
+			Short:     "s",
 		},
 		{
 			Name:      "recursive",
 			Usage:     "recursively process directories",
 			ByDefault: false,
 			FlagKey:   "decrypt.recursive",
+			Short:     "r",
 		},
 	}
 	if err := cli.SetupCommandParams(decryptCmd, params); err != nil {

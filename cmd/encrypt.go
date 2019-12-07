@@ -21,7 +21,7 @@ import (
 var encryptCmd = &cobra.Command{
 	Use:     "encrypt",
 	Aliases: []string{"enc", "seal"},
-	Example: "tred encrypt --cipher chacha --clean --recursive [INPUT]",
+	Example: "tred encrypt --cipher chacha -cr [INPUT]",
 	Short:   "Encrypt provided file or directory",
 	RunE:    runEncrypt,
 }
@@ -51,18 +51,21 @@ func init() {
 			Usage:     "remove original files after encrypt",
 			FlagKey:   "encrypt.clean",
 			ByDefault: false,
+			Short:     "c",
 		},
 		{
 			Name:      "silent",
 			Usage:     "suppress all output",
 			FlagKey:   "encrypt.silent",
 			ByDefault: false,
+			Short:     "s",
 		},
 		{
 			Name:      "recursive",
 			Usage:     "recursively process directories",
 			FlagKey:   "encrypt.recursive",
 			ByDefault: false,
+			Short:     "r",
 		},
 	}
 	if err := cli.SetupCommandParams(encryptCmd, params); err != nil {
