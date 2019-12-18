@@ -1,0 +1,57 @@
+---
+kind: pipeline
+type: docker
+name: default
+
+platform:
+  os: linux
+  arch: amd64
+
+steps:
+- name: setup
+  pull: if-not-exists
+  image: alpine:3.10
+  volumes:
+  - name: root
+    path: /root
+  commands:
+  - apk add --no-cache openssh git
+  - mkdir /root/.ssh
+  - ssh-keyscan bitbucket.org >> ~/.ssh/known_hosts
+  - ssh-keyscan github.com >> ~/.ssh/known_hosts
+  - echo $SSH_KEY | base64 -d > /root/.ssh/id_ed25519
+  - chmod 400 /root/.ssh/id_ed25519
+  - git config --global url."ssh://git@bitbucket.org/".insteadOf "https://bitbucket.org/"
+  - git config --global url."ssh://git@github.com/".insteadOf "https://github.com/"
+  environment:
+    SSH_KEY:
+      from_secret: ssh-key
+
+- name: test
+  pull: if-not-exists
+  image: golang:1.13.4
+  volumes:
+  - name: root
+    path: /root
+  commands:
+  - go test -race -cover -v -failfast ./...
+  environment:
+    GOARCH: amd64
+    GOOS: linux
+    GOPRIVATE: go.bryk.io/x
+
+trigger:
+  branch:
+  - master
+  event:
+  - push
+
+volumes:
+- name: root
+  temp: {}
+
+---
+kind: signature
+hmac: 807e36d884981faaa429cdb13954fc87ccde4c19c0d6ef085989e05553024dde
+
+...
