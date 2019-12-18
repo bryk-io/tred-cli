@@ -20,7 +20,7 @@ import (
 var decryptCmd = &cobra.Command{
 	Use:     "decrypt input",
 	Aliases: []string{"dec", "open"},
-	Example: "tred decrypt --cipher chacha -cr [INPUT]",
+	Example: "tred decrypt --cipher chacha -cra [INPUT]",
 	Short:   "Decrypt provided file or directory",
 	RunE:    runDecrypt,
 }
@@ -65,6 +65,13 @@ func init() {
 			ByDefault: false,
 			FlagKey:   "decrypt.recursive",
 			Short:     "r",
+		},
+		{
+			Name:      "all",
+			Usage:     "include hidden files",
+			FlagKey:   "decrypt.all",
+			ByDefault: false,
+			Short:     "a",
 		},
 	}
 	if err := cli.SetupCommandParams(decryptCmd, params); err != nil {
@@ -171,7 +178,7 @@ func runDecrypt(_ *cobra.Command, args []string) error {
 			}
 
 			// Ignore hidden files
-			if strings.HasPrefix(filepath.Base(f), ".") {
+			if strings.HasPrefix(filepath.Base(f), ".") && !viper.GetBool("decrypt.all") {
 				log.WithFields(logrus.Fields{
 					"location": f,
 				}).Debug("ignoring hidden file")

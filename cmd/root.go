@@ -1,3 +1,4 @@
+// Package cmd provides a CLI tool to manage secure files at rest.
 package cmd
 
 import (
@@ -5,10 +6,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path/filepath"
 	"time"
 
-	"github.com/cheggaaa/pb"
+	"github.com/cheggaaa/pb/v3"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -54,8 +54,7 @@ func getInteractiveKey() ([]byte, error) {
 
 // Get a progress bar for based on a file details
 func getProgressBar(info os.FileInfo) *pb.ProgressBar {
-	prefix := fmt.Sprintf("%-30s", filepath.Base(info.Name()))
-	bar := pb.New(int(info.Size())).SetUnits(pb.U_BYTES).Prefix(prefix)
+	bar := pb.New(int(info.Size()))
 	bar.SetWidth(100)
 	bar.SetMaxWidth(100)
 	return bar

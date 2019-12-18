@@ -21,7 +21,7 @@ import (
 var encryptCmd = &cobra.Command{
 	Use:     "encrypt",
 	Aliases: []string{"enc", "seal"},
-	Example: "tred encrypt --cipher chacha -cr [INPUT]",
+	Example: "tred encrypt --cipher chacha -cra [INPUT]",
 	Short:   "Encrypt provided file or directory",
 	RunE:    runEncrypt,
 }
@@ -66,6 +66,13 @@ func init() {
 			FlagKey:   "encrypt.recursive",
 			ByDefault: false,
 			Short:     "r",
+		},
+		{
+			Name:      "all",
+			Usage:     "include hidden files",
+			FlagKey:   "encrypt.all",
+			ByDefault: false,
+			Short:     "a",
 		},
 	}
 	if err := cli.SetupCommandParams(encryptCmd, params); err != nil {
@@ -167,7 +174,7 @@ func runEncrypt(_ *cobra.Command, args []string) error {
 			}
 
 			// Ignore hidden files
-			if strings.HasPrefix(filepath.Base(f), ".") {
+			if strings.HasPrefix(filepath.Base(f), ".") && !viper.GetBool("encrypt.all") {
 				log.WithFields(logrus.Fields{
 					"location": f,
 				}).Debug("ignoring hidden file")

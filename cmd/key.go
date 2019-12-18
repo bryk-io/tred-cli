@@ -14,7 +14,7 @@ import (
 
 var keyCmd = &cobra.Command{
 	Use:     "key",
-	Example: "tred key --encode",
+	Example: "tred key -es 512",
 	Short:   "Generate a random and secure key value",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// Generate
@@ -24,7 +24,7 @@ var keyCmd = &cobra.Command{
 		}
 
 		// Encode
-		if viper.GetBool("key.encode") {
+		if viper.GetBool("key.base64") {
 			k = []byte(base64.StdEncoding.EncodeToString(k))
 		}
 
@@ -43,12 +43,14 @@ func init() {
 			Usage:     "size (in bytes) for the key value",
 			FlagKey:   "key.size",
 			ByDefault: 128,
+			Short:     "s",
 		},
 		{
-			Name:      "encode",
+			Name:      "base64",
 			Usage:     "encode the key in base64",
-			FlagKey:   "key.encode",
+			FlagKey:   "key.base64",
 			ByDefault: false,
+			Short:     "e",
 		},
 	}
 	if err := cli.SetupCommandParams(keyCmd, params); err != nil {
