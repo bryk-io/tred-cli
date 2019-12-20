@@ -1,12 +1,11 @@
 package cmd
 
 import (
-	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/pkg/errors"
@@ -14,7 +13,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"go.bryk.io/x/cli"
-	"go.bryk.io/x/crypto/tred"
 )
 
 var decryptCmd = &cobra.Command{
@@ -73,56 +71,18 @@ func init() {
 			ByDefault: false,
 			Short:     "a",
 		},
+		{
+			Name:      "workers",
+			Usage:     "number or workers to run for parallel processing",
+			FlagKey:   "decrypt.workers",
+			ByDefault: runtime.NumCPU(),
+			Short:     "w",
+		},
 	}
 	if err := cli.SetupCommandParams(decryptCmd, params); err != nil {
 		panic(err)
 	}
 	rootCmd.AddCommand(decryptCmd)
-}
-
-func decryptFile(w *tred.Worker, file string, withBar bool) error {
-	input, err := os.Open(filepath.Clean(file))
-	if err != nil {
-		return err
-	}
-	defer func() {
-		_ = input.Close()
-	}()
-
-	output, err := os.Create(strings.Replace(file, viper.GetString("decrypt.suffix"), "", 1))
-	if err != nil {
-		return err
-	}
-	defer func() {
-		_ = output.Close()
-	}()
-
-	var r io.Reader
-	r = input
-	if !viper.GetBool("encrypt.silent") && withBar {
-		info, err := input.Stat()
-		if err != nil {
-			return err
-		}
-		bar := getProgressBar(info)
-		bar.Start()
-		defer bar.Finish()
-		r = bar.NewProxyReader(input)
-	}
-	_, err = w.Decrypt(r, output)
-	if err == nil {
-		if viper.GetBool("decrypt.clean") {
-			defer func() {
-				_ = os.Remove(file)
-			}()
-		}
-	} else {
-		defer func() {
-			_ = os.Remove(output.Name())
-		}()
-		return err
-	}
-	return err
 }
 
 func runDecrypt(_ *cobra.Command, args []string) error {
@@ -156,18 +116,17 @@ func runDecrypt(_ *cobra.Command, args []string) error {
 		}
 	}
 
-	// Get worker instance
-	w, err := getWorker(key, viper.GetString("decrypt.cipher"))
+	// Start tred workers pool
+	pool, err := newPool(viper.GetInt("decrypt.workers"), key, viper.GetString("decrypt.cipher"), log)
 	if err != nil {
-		log.WithField("error", err).Fatal("could not initialize TRED worker")
+		log.WithField("error", err).Fatal("could not initialize TRED workers")
 		return err
 	}
 
 	// Process input
 	start := time.Now()
 	if isDir(input) {
-		wg := sync.WaitGroup{}
-		err := filepath.Walk(input, func(f string, i os.FileInfo, err error) error {
+		_ = filepath.Walk(input, func(f string, i os.FileInfo, err error) error {
 			// Unexpected error walking the directory
 			if err != nil {
 				log.WithFields(logrus.Fields{
@@ -198,30 +157,20 @@ func runDecrypt(_ *cobra.Command, args []string) error {
 				return nil
 			}
 
-			// Process regular files
-			wg.Add(1)
-			go func(entry string, i os.FileInfo) {
-				if err := decryptFile(w, entry, false); err != nil {
-					log.WithFields(logrus.Fields{
-						"file":  i.Name(),
-						"error": err,
-					}).Error("failed to decrypt file")
-				} else {
-					log.WithFields(logrus.Fields{
-						"file": i.Name(),
-					}).Debug("file decrypted")
-				}
-				wg.Done()
-			}(f, i)
+			// Add job to processing pool
+			pool.add(job{file: f, showBar: false})
 			return nil
 		})
-		wg.Wait()
-		log.WithFields(logrus.Fields{"time": time.Since(start)}).Info("operation completed")
-		return err
+	} else {
+		// Process single file
+		pool.add(job{file: input, showBar: true})
 	}
 
-	// Process single file
-	err = decryptFile(w, input, true)
-	log.WithFields(logrus.Fields{"time": time.Since(start)}).Info("operation completed")
+	// Wait for operations to complete
+	pool.done()
+	log.WithFields(logrus.Fields{
+		"time":  time.Since(start),
+		"files": pool.count,
+	}).Info("operation completed")
 	return err
 }

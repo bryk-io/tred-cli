@@ -1,7 +1,7 @@
 .PHONY: all
 .DEFAULT_GOAL := help
 BINARY_NAME=tred
-VERSION_TAG=0.4.1
+VERSION_TAG=0.4.2
 
 # Custom linker tags
 LD_FLAGS="\
