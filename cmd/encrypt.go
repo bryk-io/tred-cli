@@ -35,7 +35,7 @@ func init() {
 			Name:      "suffix",
 			Usage:     "suffix to add on encrypted files",
 			FlagKey:   "encrypt.suffix",
-			ByDefault: "_enc",
+			ByDefault: ".tred",
 		},
 		{
 			Name:      "key",
