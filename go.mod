@@ -10,6 +10,6 @@ require (
 	github.com/spf13/cobra v0.0.5
 	github.com/spf13/viper v1.6.1
 	github.com/x-cray/logrus-prefixed-formatter v0.5.2
-	go.bryk.io/x v0.0.0-20191214162130-8a2dd183e3c9
+	go.bryk.io/x v0.0.0-20200103044825-938a28078cde
 	golang.org/x/crypto v0.0.0-20191122220453-ac88ee75c92c
 )
