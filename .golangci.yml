@@ -45,9 +45,11 @@ linters:
     - stylecheck
     - interfacer
     - unparam
-  disable:
     - deadcode
+    - gocognit
+    - goimports
     - unused
+  disable:
     - dupl
 issues:
   exclude-use-default: false
@@ -69,10 +71,11 @@ linters-settings:
     check-shadowing: false
   golint:
     min-confidence: 0.8
+    set-exit-status: true
   gofmt:
     simplify: true
   gocyclo:
-    min-complexity: 15
+    min-complexity: 18
   maligned:
     suggest-new: true
   goconst:

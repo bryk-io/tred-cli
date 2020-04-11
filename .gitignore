@@ -12,8 +12,14 @@ release-*
 # Deps
 vendor/**
 
+# Temporary files
+tmp/
+
 # PKI
 *.crt
 *.csr
 *.pem
 *.key
+
+# Secret data
+secret*

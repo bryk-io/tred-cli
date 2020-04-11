@@ -1,12 +1,14 @@
 .PHONY: all
 .DEFAULT_GOAL := help
 BINARY_NAME=tred
-VERSION_TAG=0.4.2
+VERSION_TAG=0.4.3
 
-# Custom linker tags
-LD_FLAGS="\
--X github.com/bryk-io/tred-cli/cmd.buildCode=`git log --pretty=format:'%H' -n1` \
--X github.com/bryk-io/tred-cli/cmd.releaseTag=$(VERSION_TAG)"
+# Linker tags
+# https://golang.org/cmd/link/
+LD_FLAGS += -s -w
+LD_FLAGS += -X github.com/bryk-io/tred-cli/cmd.coreVersion=$(VERSION_TAG)
+LD_FLAGS += -X github.com/bryk-io/tred-cli/cmd.buildTimestamp=$(shell date +'%s')
+LD_FLAGS += -X github.com/bryk-io/tred-cli/cmd.buildCode=$(shell git log --pretty=format:'%H' -n1)
 
 ## help: Prints this help message
 help:
@@ -30,27 +32,26 @@ clean:
 	go mod tidy
 	go mod verify
 
-## test: Run all tests excluding the vendor dependencies
-test:
-	# Static analysis
+## lint: Static analysis
+lint:
 	golangci-lint run -v ./...
-	go-consistent -v ./...
 
-	# Unit tests
-	go test -race -cover -v ./...
+## test: Run unit tests excluding the vendor dependencies
+test:
+	go test -race -cover -v -failfast ./...
 
 ## build: Build for the default architecture in use
 build:
-	go build -v -ldflags $(LD_FLAGS) -o $(BINARY_NAME)
+	go build -v -ldflags '$(LD_FLAGS)' -o $(BINARY_NAME)
 
 ## install: Install the binary to '$GOPATH/bin'
 install:
-	go build -v -ldflags $(LD_FLAGS) -i -o ${GOPATH}/bin/$(BINARY_NAME)
+	go build -v -ldflags '$(LD_FLAGS)' -i -o ${GOPATH}/bin/$(BINARY_NAME)
 
 ## build-for: Build the availabe binaries for the specified 'os' and 'arch'
 build-for:
 	CGO_ENABLED=0 GOOS=$(os) GOARCH=$(arch) \
-	go build -v -ldflags $(LD_FLAGS) \
+	go build -v -ldflags '$(LD_FLAGS)' \
 	-o $(dest)$(BINARY_NAME)_$(VERSION_TAG)_$(os)_$(arch)$(suffix)
 
 ## release: Prepare the artifacts for a new tagged release
@@ -62,7 +63,6 @@ release:
 	make build-for os=windows arch=amd64 suffix=".exe" dest=release-$(VERSION_TAG)/
 	make build-for os=windows arch=386 suffix=".exe" dest=release-$(VERSION_TAG)/
 
-## ci-conf: Update CI/CD configuration file
-ci-conf:
-	drone lint .drone.yml
-	@DRONE_SERVER=${BRYK_DRONE_SERVER} DRONE_TOKEN=${BRYK_DRONE_TOKEN} drone sign --save bryk-io/tred-cli
+## ci-update: Update the signature on the CI configuration file
+ci-update:
+	drone sign bryk-io/tred-cli --save
