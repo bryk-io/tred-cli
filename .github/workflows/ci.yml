@@ -51,6 +51,13 @@ jobs:
       - name: Test
         run: make test
 
+      # Save coverage report as artifact
+      - name: Coverage report
+        uses: actions/upload-artifact@v2
+        with:
+          name: coverage-report
+          path: coverage.html
+
       # Ensure project compile and build successfully
       - name: Build
         run: make build
