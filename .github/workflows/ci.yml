@@ -34,6 +34,12 @@ jobs:
           path: ./vendor
           key: ${{ env.cache-name }}-${{ hashFiles('go.sum') }}
 
+      # Configure environment to access private modules
+      - name: Private modules credentials
+        run: ./.github/workflows/assets/utils.sh credentials
+        env:
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+
       # Style consistency and static analysis using 'golangci-lint'
       # https://github.com/marketplace/actions/run-golangci-lint
       - name: Static analysis
