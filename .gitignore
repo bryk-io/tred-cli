@@ -23,3 +23,6 @@ tmp/
 
 # Secret data
 secret*
+
+# Code coverage reports
+coverage.*

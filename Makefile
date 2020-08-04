@@ -20,7 +20,7 @@ updates:
 	# https://github.com/golang/go/wiki/Modules#how-to-upgrade-and-downgrade-dependencies
 	go list -u -f '{{if (and (not (or .Main .Indirect)) .Update)}}{{.Path}}: {{.Version}} -> {{.Update.Version}}{{end}}' -m all 2> /dev/null
 
-## scan: Look for knonwn vulnerabilities in the project dependencies
+## scan: Look for known vulnerabilities in the project dependencies
 # https://github.com/sonatype-nexus-community/nancy
 scan:
 	@nancy -quiet go.sum
@@ -38,7 +38,8 @@ lint:
 
 ## test: Run unit tests excluding the vendor dependencies
 test:
-	go test -race -cover -v -failfast ./...
+	go test -v -race -failfast -coverprofile=coverage.report ./...
+	go tool cover -html coverage.report -o coverage.html
 
 ## build: Build for the default architecture in use
 build:
@@ -48,7 +49,7 @@ build:
 install:
 	go build -v -ldflags '$(LD_FLAGS)' -i -o ${GOPATH}/bin/$(BINARY_NAME)
 
-## build-for: Build the availabe binaries for the specified 'os' and 'arch'
+## build-for: Build the available binaries for the specified 'os' and 'arch'
 build-for:
 	CGO_ENABLED=0 GOOS=$(os) GOARCH=$(arch) \
 	go build -v -ldflags '$(LD_FLAGS)' \
@@ -62,7 +63,3 @@ release:
 	make build-for os=darwin arch=amd64 dest=release-$(VERSION_TAG)/
 	make build-for os=windows arch=amd64 suffix=".exe" dest=release-$(VERSION_TAG)/
 	make build-for os=windows arch=386 suffix=".exe" dest=release-$(VERSION_TAG)/
-
-## ci-update: Update the signature on the CI configuration file
-ci-update:
-	drone sign bryk-io/tred-cli --save
