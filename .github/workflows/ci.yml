@@ -25,14 +25,14 @@ jobs:
       # If "vendor" is in cache, restore.
       # To run conditional steps use:
       # if: steps.vendor-cache.outputs.cache-hit != 'true'
-#      - name: "Restore modules from cache"
-#        id: vendor-cache
-#        uses: actions/cache@v2
-#        env:
-#          cache-name: vendor
-#        with:
-#          path: ./vendor
-#          key: ${{ env.cache-name }}-${{ hashFiles('go.sum') }}
+      - name: "Restore modules from cache"
+        id: vendor-cache
+        uses: actions/cache@v2
+        env:
+          cache-name: vendor
+        with:
+          path: ./vendor
+          key: ${{ env.cache-name }}-${{ hashFiles('go.sum') }}
 
       # Configure environment to access private modules
       - name: Private modules credentials
