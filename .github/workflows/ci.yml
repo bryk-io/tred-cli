@@ -3,14 +3,17 @@ on:
   push:
     branches:
       - master
+    tags:
+      - v*
   pull_request:
     branches:
       - master
+  workflow_dispatch: {}
 jobs:
   test:
     name: code quality and correctness
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       # Go 1.14
       - name: Set up Go 1.14
@@ -22,10 +25,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
+      # Configure runner environment
+      - name: Set up runner environment
+        run: ./.github/workflows/assets/utils.sh setup
+        env:
+          GITHUB_USER: ${{ github.actor }}
+          ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+
       # If "vendor" is in cache, restore.
       # To run conditional steps use:
       # if: steps.vendor-cache.outputs.cache-hit != 'true'
-      - name: "Restore modules from cache"
+      - name: Restore modules from cache
         id: vendor-cache
         uses: actions/cache@v2
         env:
@@ -33,12 +43,6 @@ jobs:
         with:
           path: ./vendor
           key: ${{ env.cache-name }}-${{ hashFiles('go.sum') }}
-
-      # Configure environment to access private modules
-      - name: Private modules credentials
-        run: ./.github/workflows/assets/utils.sh credentials
-        env:
-          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
 
       # Style consistency and static analysis using 'golangci-lint'
       # https://github.com/marketplace/actions/run-golangci-lint
@@ -51,17 +55,18 @@ jobs:
       - name: Test
         run: make test
 
-      # Save coverage report as artifact
-      - name: Coverage report
-        uses: actions/upload-artifact@v2
-        with:
-          name: coverage-report
-          path: coverage.html
-
       # Ensure project compile and build successfully
       - name: Build
         run: make build
 
+      # Save artifacts
+      - name: Save artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: assets
+          path: |
+            coverage.html
+
       # Populate vendor cache to speed up future runs
-      - name: "Populate vendor cache"
+      - name: Populate vendor cache
         run: go mod vendor
