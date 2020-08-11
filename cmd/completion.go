@@ -11,7 +11,7 @@ Before using completion features, you have to source completion code
 from your .profile or .bashrc/.zshrc file. This is done by adding
 following line to one of above files:
 
-	source <(tred completion SHELL)
+	source <(tredctl completion SHELL)
 
 Bash users can as well save it to the file and copy it to:
 	/etc/bash_completion.d/

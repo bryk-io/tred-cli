@@ -9,7 +9,7 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "tred",
+	Use:   "tredctl",
 	Short: "CLI for the 'Tamper Resistant Encrypted Data' protocol",
 }
 
