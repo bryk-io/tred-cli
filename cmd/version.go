@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 	"runtime"
-	"strconv"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -32,9 +31,9 @@ var versionCmd = &cobra.Command{
 			"Home":       "https://github.com/bryk-io/tred-cli",
 		}
 		if buildTimestamp != "" {
-			st, err := strconv.ParseInt(buildTimestamp, 10, 64)
+			rd, err := time.Parse(time.RFC3339, buildTimestamp)
 			if err == nil {
-				components["Release Date"] = time.Unix(st, 0).Format(time.RFC822)
+				components["Release Date"] = rd.Format(time.RFC822)
 			}
 		}
 		for k, v := range components {

@@ -1,14 +1,20 @@
-.PHONY: all
+.PHONY: *
 .DEFAULT_GOAL := help
-BINARY_NAME=tred
-VERSION_TAG=0.4.3
+
+# Project setup
+BINARY_NAME=tredctl
+
+# State values
+GIT_COMMIT_DATE=$(shell TZ=UTC git log -n1 --pretty=format:'%cd' --date='format-local:%Y-%m-%dT%H:%M:%SZ')
+GIT_COMMIT_HASH=$(shell git log -n1 --pretty=format:'%H')
+GIT_TAG=$(shell git describe --abbrev=0 --match='v*' --always | cut -c 1-8)
 
 # Linker tags
 # https://golang.org/cmd/link/
 LD_FLAGS += -s -w
-LD_FLAGS += -X github.com/bryk-io/tred-cli/cmd.coreVersion=$(VERSION_TAG)
-LD_FLAGS += -X github.com/bryk-io/tred-cli/cmd.buildTimestamp=$(shell date +'%s')
-LD_FLAGS += -X github.com/bryk-io/tred-cli/cmd.buildCode=$(shell git log --pretty=format:'%H' -n1)
+LD_FLAGS += -X github.com/bryk-io/tred-cli/cmd.coreVersion=$(GIT_TAG)
+LD_FLAGS += -X github.com/bryk-io/tred-cli/cmd.buildTimestamp=$(GIT_COMMIT_DATE)
+LD_FLAGS += -X github.com/bryk-io/tred-cli/cmd.buildCode=$(GIT_COMMIT_HASH)
 
 ## help: Prints this help message
 help:
@@ -53,13 +59,8 @@ install:
 build-for:
 	CGO_ENABLED=0 GOOS=$(os) GOARCH=$(arch) \
 	go build -v -ldflags '$(LD_FLAGS)' \
-	-o $(dest)$(BINARY_NAME)_$(VERSION_TAG)_$(os)_$(arch)$(suffix)
+	-o $(BINARY_NAME)_$(os)_$(arch)$(suffix)
 
 ## release: Prepare the artifacts for a new tagged release
 release:
-	@-rm -rf release-$(VERSION_TAG)
-	mkdir release-$(VERSION_TAG)
-	make build-for os=linux arch=amd64 dest=release-$(VERSION_TAG)/
-	make build-for os=darwin arch=amd64 dest=release-$(VERSION_TAG)/
-	make build-for os=windows arch=amd64 suffix=".exe" dest=release-$(VERSION_TAG)/
-	make build-for os=windows arch=386 suffix=".exe" dest=release-$(VERSION_TAG)/
+	goreleaser release --skip-validate --skip-publish --rm-dist

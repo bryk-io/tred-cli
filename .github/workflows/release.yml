@@ -1,17 +1,15 @@
-name: ci
+name: release
 on:
   push:
-    branches:
-      - '*'
-  pull_request:
-    branches:
-      - master
-  workflow_dispatch: {}
+    tags:
+      - v*
 jobs:
-  test:
-    name: code quality and correctness
+  # Publish project package(s)
+  publish:
+    name: publish package
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    if: ${{ contains(github.ref, 'refs/tags/') }}
     steps:
       # Go 1.14
       - name: Set up Go 1.14
@@ -22,8 +20,10 @@ jobs:
       # Checkout code
       - name: Checkout repository
         uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
 
-      # Configure runner environment
+      # Prepare runner environment
       - name: Set up runner environment
         run: ./.github/workflows/assets/utils.sh setup
         env:
@@ -42,29 +42,12 @@ jobs:
           path: ./vendor
           key: ${{ env.cache-name }}-${{ hashFiles('go.sum') }}
 
-      # Style consistency and static analysis using 'golangci-lint'
-      # https://github.com/marketplace/actions/run-golangci-lint
-      - name: Static analysis
-        uses: golangci/golangci-lint-action@v2
+      # Use goreleaser to create the new release
+      - name: Create release
+        uses: goreleaser/goreleaser-action@v2
+        if: startsWith(github.ref, 'refs/tags/v')
         with:
-          version: v1.29
-
-      # Run unit tests
-      - name: Test
-        run: make test
-
-      # Ensure project compile and build successfully
-      - name: Build
-        run: make build
-
-      # Save artifacts
-      - name: Save artifacts
-        uses: actions/upload-artifact@v2
-        with:
-          name: assets
-          path: |
-            coverage.html
-
-      # Populate vendor cache to speed up future runs
-      - name: Populate vendor cache
-        run: go mod vendor
+          version: latest
+          args: release --rm-dist --skip-validate
+        env:
+          GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}

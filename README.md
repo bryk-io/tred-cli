@@ -18,10 +18,5 @@ Some of its characteristics include:
 - Prevent leaking information when attempting to process manipulated data packets.
 - Prevent overflows when processing large data streams.
 
-```bash
-# To install latest version
-curl -sfl https://raw.githubusercontent.com/bryk-io/tred-cli/master/install.sh | sh -s -- -b /usr/local/bin
-```
-
-Alternatively you can directly download the binary from the
-[published releases](https://github.com/bryk-io/tred-cli/releases). 
+You can directly download the binary from the
+[published releases](https://github.com/bryk-io/tred-cli/releases).

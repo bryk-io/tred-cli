@@ -4,10 +4,10 @@
 
 # Builds
 tred
-tred-*
+tred_*
 tredctl
-tredctl-*
-release-*
+tredctl_*
+dist
 
 # Deps
 vendor/**
