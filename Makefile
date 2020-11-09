@@ -55,7 +55,7 @@ release:
 ## scan: Look for known vulnerabilities in the project dependencies
 # https://github.com/sonatype-nexus-community/nancy
 scan:
-	@nancy -quiet go.sum
+	@go list -f '{{if not .Indirect}}{{.}}{{end}}' -mod=mod -m all | nancy sleuth -o text
 
 ## test: Run unit tests excluding the vendor dependencies
 test:
@@ -63,6 +63,6 @@ test:
 	go tool cover -html coverage.report -o coverage.html
 
 ## updates: List available updates for direct dependencies
+# https://github.com/golang/go/wiki/Modules#how-to-upgrade-and-downgrade-dependencies
 updates:
-	# https://github.com/golang/go/wiki/Modules#how-to-upgrade-and-downgrade-dependencies
-	go list -u -f '{{if (and (not (or .Main .Indirect)) .Update)}}{{.Path}}: {{.Version}} -> {{.Update.Version}}{{end}}' -m all 2> /dev/null
+	@go list -mod=mod -u -f '{{if (and (not (or .Main .Indirect)) .Update)}}{{.Path}}: {{.Version}} -> {{.Update.Version}}{{end}}' -m all 2> /dev/null
