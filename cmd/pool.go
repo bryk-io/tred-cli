@@ -8,9 +8,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
-	"go.bryk.io/x/crypto/tred"
+	"go.bryk.io/pkg/crypto/tred"
+	xlog "go.bryk.io/pkg/log"
 )
 
 type job struct {
@@ -20,7 +20,7 @@ type job struct {
 }
 
 type pool struct {
-	log     *logrus.Logger
+	log     xlog.Logger
 	sink    chan job
 	count   int
 	workers []*worker
@@ -30,12 +30,12 @@ type pool struct {
 type worker struct {
 	name string
 	jobs <-chan job
-	log  *logrus.Entry
+	log  xlog.Logger
 	tw   *tred.Worker
 	wg   *sync.WaitGroup
 }
 
-func newPool(size int, key []byte, cipher string, log *logrus.Logger) (*pool, error) {
+func newPool(size int, key []byte, cipher string, log xlog.Logger) (*pool, error) {
 	// New pool
 	p := &pool{
 		wg:      sync.WaitGroup{},
@@ -54,7 +54,7 @@ func newPool(size int, key []byte, cipher string, log *logrus.Logger) (*pool, er
 		w := &worker{
 			name: name,
 			jobs: p.sink,
-			log:  log.WithField("component", name),
+			log:  log.Sub(xlog.Fields{"component": name}),
 			tw:   tw,
 			wg:   &p.wg,
 		}
@@ -102,6 +102,7 @@ func (w *worker) run() {
 	}
 }
 
+// nolint: gosec
 func (w *worker) encrypt(file string, withBar bool) error {
 	// Open input file
 	input, err := os.Open(filepath.Clean(file))
@@ -109,7 +110,9 @@ func (w *worker) encrypt(file string, withBar bool) error {
 		return err
 	}
 	defer func() {
-		_ = input.Close()
+		if err := input.Close(); err != nil {
+			w.log.Error(err)
+		}
 	}()
 
 	// Create new file for the ciphertext
@@ -118,7 +121,9 @@ func (w *worker) encrypt(file string, withBar bool) error {
 		return err
 	}
 	defer func() {
-		_ = output.Close()
+		if err := output.Close(); err != nil {
+			w.log.Error(err)
+		}
 	}()
 
 	// Get progress bar
@@ -136,13 +141,14 @@ func (w *worker) encrypt(file string, withBar bool) error {
 	if err == nil {
 		if viper.GetBool("encrypt.clean") {
 			if err := os.Remove(file); err != nil {
-				w.log.WithField("file", file).Warn("failed to remove file")
+				w.log.WithField("file", file).Warning("failed to remove file")
 			}
 		}
 	}
 	return err
 }
 
+// nolint: gosec
 func (w *worker) decrypt(file string, withBar bool) error {
 	// Open input file
 	input, err := os.Open(filepath.Clean(file))
@@ -150,7 +156,9 @@ func (w *worker) decrypt(file string, withBar bool) error {
 		return err
 	}
 	defer func() {
-		_ = input.Close()
+		if err := input.Close(); err != nil {
+			w.log.Error(err)
+		}
 	}()
 
 	// Get output holder
@@ -159,7 +167,9 @@ func (w *worker) decrypt(file string, withBar bool) error {
 		return err
 	}
 	defer func() {
-		_ = output.Close()
+		if err := output.Close(); err != nil {
+			w.log.Error(err)
+		}
 	}()
 
 	// Get progress bar
@@ -178,13 +188,13 @@ func (w *worker) decrypt(file string, withBar bool) error {
 		// Remove encrypted file
 		if viper.GetBool("decrypt.clean") {
 			if err = os.Remove(file); err != nil {
-				w.log.WithField("file", file).Warn("failed to remove file")
+				w.log.WithField("file", file).Warning("failed to remove file")
 			}
 		}
 	} else {
 		// Remove partially decrypted file
 		if err := os.Remove(output.Name()); err != nil {
-			w.log.WithField("file", file).Warn("failed to remove partially decrypted file")
+			w.log.WithField("file", file).Warning("failed to remove partially decrypted file")
 		}
 	}
 	return err

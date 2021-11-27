@@ -9,10 +9,10 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"go.bryk.io/x/cli"
+	"go.bryk.io/pkg/cli"
+	xlog "go.bryk.io/pkg/log"
 )
 
 var decryptCmd = &cobra.Command{
@@ -129,16 +129,16 @@ func runDecrypt(_ *cobra.Command, args []string) error {
 		_ = filepath.Walk(input, func(f string, i os.FileInfo, err error) error {
 			// Unexpected error walking the directory
 			if err != nil {
-				log.WithFields(logrus.Fields{
+				log.WithFields(xlog.Fields{
 					"location": f,
 					"error":    err,
-				}).Warn("failed to traverse location")
+				}).Warning("failed to traverse location")
 				return err
 			}
 
 			// Ignore hidden files
 			if strings.HasPrefix(filepath.Base(f), ".") && !viper.GetBool("decrypt.all") {
-				log.WithFields(logrus.Fields{
+				log.WithFields(xlog.Fields{
 					"location": f,
 				}).Debug("ignoring hidden file")
 				return nil
@@ -146,7 +146,7 @@ func runDecrypt(_ *cobra.Command, args []string) error {
 
 			// Don't go into sub-directories if not required
 			if i.IsDir() && !viper.GetBool("decrypt.recursive") {
-				log.WithFields(logrus.Fields{
+				log.WithFields(xlog.Fields{
 					"location": f,
 				}).Debug("ignoring directory on non-recursive run")
 				return filepath.SkipDir
@@ -168,7 +168,7 @@ func runDecrypt(_ *cobra.Command, args []string) error {
 
 	// Wait for operations to complete
 	pool.done()
-	log.WithFields(logrus.Fields{
+	log.WithFields(xlog.Fields{
 		"time":  time.Since(start),
 		"files": pool.count,
 	}).Info("operation completed")

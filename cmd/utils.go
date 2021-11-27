@@ -3,22 +3,19 @@ package cmd
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
-	"time"
 
 	"github.com/cheggaaa/pb/v3"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
-	prefixed "github.com/x-cray/logrus-prefixed-formatter"
-	"go.bryk.io/x/crypto/tred"
-	"golang.org/x/crypto/ssh/terminal"
+	"go.bryk.io/pkg/crypto/tred"
+	xlog "go.bryk.io/pkg/log"
+	"golang.org/x/term"
 )
 
 // Helper method to securely read data from stdin
 func secureAsk(prompt string) ([]byte, error) {
 	fmt.Print(prompt)
-	return terminal.ReadPassword(0)
+	return term.ReadPassword(0)
 }
 
 // Ask the user to enter a key phrase that will be used to expand a secure cryptographic key
@@ -59,17 +56,14 @@ func isDir(file string) bool {
 }
 
 // Return a new logging agent
-func getLogger(silent bool) *logrus.Logger {
-	ll := logrus.New()
-	ll.Level = logrus.DebugLevel
-	ll.Formatter = &prefixed.TextFormatter{
-		FullTimestamp:   true,
-		TimestampFormat: time.StampMilli,
-	}
+func getLogger(silent bool) xlog.Logger {
 	if silent {
-		ll.Out = ioutil.Discard
+		return xlog.Discard()
 	}
-	return ll
+	return xlog.WithZero(xlog.ZeroOptions{
+		PrettyPrint: true,
+		ErrorField:  "error",
+	})
 }
 
 // Return a new TRED worker instance

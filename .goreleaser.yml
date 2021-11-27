@@ -14,6 +14,8 @@ builds:
   - id: tredctl
     # main binary name
     binary: tredctl
+    # code entrypoint
+    main: main.go
     # CLI flags for the 'go build' command
     flags:
       -v
@@ -41,6 +43,20 @@ builds:
 archives:
   # a single project can produce multiple archives
   - name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    builds:
+      # artifacts to pack
+      - tredctl
+    format_overrides:
+      # use zip file instead of 'tar.gz' on Windows systems
+      - goos: windows
+        format: zip
+    files:
+      # include documentation files in the package for distribution
+      - README.md
+      - LICENSE*
+      - src: '*.md'
+        dst: docs
+        strip_parent: true
 # generate integrity checksums
 # https://goreleaser.com/customization/checksum/
 checksum:
@@ -57,12 +73,17 @@ snapshot:
 # configure the 'CHANGELOG.md' file produced
 # https://goreleaser.com/customization/release/#customize-the-changelog
 changelog:
-  sort: asc
+  # Sorts the changelog by the commit messages (asc, desc or '')
+  sort: ''
+  # Remove certain commit messages from the changelog
   filters:
+    # Standard commit messages can help to produce better changelogs
+    # https://www.conventionalcommits.org/en/v1.0.0/
     exclude:
       - "^docs:"
       - "^test:"
-      - typo
+      - "^chore:"
+      - "^typo:"
 # Produce homebrew formulas for the project artifacts
 # https://goreleaser.com/customization/homebrew/
 brews:
@@ -70,7 +91,7 @@ brews:
     # Formula name
     name: tredctl
     # Push the formula to the tap repository
-    skip_upload: false
+    skip_upload: "false"
     # TAP repository
     tap:
       owner: bryk-io
@@ -92,3 +113,24 @@ brews:
       prefix.install_metafiles
     test: |
       system "#{bin}/tredctl version"
+# linux packages
+# https://goreleaser.com/customization/nfpm/
+nfpms:
+  -
+    file_name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
+    builds:
+      - tredctl
+    vendor: Bryk Labs
+    homepage: https://github.com/bryk-io/tred-cli
+    maintainer: Ben Cessa <ben@bryk.io>
+    description: CLI utility for secure at-rest data storage using the 'TRED' protocol.
+    license: BSD-3-Clause
+    formats:
+      # Alpine
+      - apk
+      # Debian based distributions
+      - deb
+      # RedHat based distributions
+      - rpm
+    # Binary location
+    bindir: /usr/local/bin

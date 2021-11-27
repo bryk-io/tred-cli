@@ -9,7 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"go.bryk.io/x/cli"
+	"go.bryk.io/pkg/cli"
 )
 
 var keyCmd = &cobra.Command{
