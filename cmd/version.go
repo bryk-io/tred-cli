@@ -8,16 +8,15 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Defines the semantic version of the build
+// Defines the semantic version of the build.
 var coreVersion string
 
-// Provides the commit identifier used to build the binary
+// Provides the commit identifier used to build the binary.
 var buildCode string
 
-// Provides the UNIX timestamp of the build
+// Provides the UNIX timestamp of the build.
 var buildTimestamp string
 
-// versionCmd represents the version command
 var versionCmd = &cobra.Command{
 	Use:     "version",
 	Aliases: []string{"info"},

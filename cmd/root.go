@@ -13,7 +13,7 @@ var rootCmd = &cobra.Command{
 	Short: "CLI for the 'Tamper Resistant Encrypted Data' protocol",
 }
 
-// Execute adds all child commands to the root command
+// Execute adds all child commands to the root command.
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)

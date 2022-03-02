@@ -12,13 +12,14 @@ import (
 	"golang.org/x/term"
 )
 
-// Helper method to securely read data from stdin
+// Helper method to securely read data from stdin.
 func secureAsk(prompt string) ([]byte, error) {
 	fmt.Print(prompt)
 	return term.ReadPassword(0)
 }
 
-// Ask the user to enter a key phrase that will be used to expand a secure cryptographic key
+// Ask the user to enter a key phrase that will be used to
+// expand a secure cryptographic key.
 func getInteractiveKey() ([]byte, error) {
 	key, err := secureAsk("Encryption Key: ")
 	if err != nil {
@@ -34,7 +35,7 @@ func getInteractiveKey() ([]byte, error) {
 	return key, nil
 }
 
-// Get a progress bar for based on a file details
+// Get a progress bar for based on a file details.
 func getProgressBar(file *os.File) *pb.ProgressBar {
 	info, err := file.Stat()
 	if err != nil {
@@ -46,7 +47,7 @@ func getProgressBar(file *os.File) *pb.ProgressBar {
 	return bar
 }
 
-// Inspect if the passed in file path is a directory or not
+// Inspect if the passed in file path is a directory or not.
 func isDir(file string) bool {
 	info, err := os.Stat(file)
 	if err != nil {
@@ -55,7 +56,7 @@ func isDir(file string) bool {
 	return info.IsDir()
 }
 
-// Return a new logging agent
+// Return a new logging agent.
 func getLogger(silent bool) xlog.Logger {
 	if silent {
 		return xlog.Discard()
@@ -66,7 +67,7 @@ func getLogger(silent bool) xlog.Logger {
 	})
 }
 
-// Return a new TRED worker instance
+// Return a new TRED worker instance.
 func getWorker(key []byte, cipher string) (*tred.Worker, error) {
 	// Get cipher suite
 	var cs byte
