@@ -38,6 +38,11 @@ builds:
     # supported architectures
     goarch:
       - amd64
+      - arm64
+    # windows ARM is not supported
+    ignore:
+      - goos: windows
+        goarch: arm64
 # packages to produce
 # https://goreleaser.com/customization/archive/
 archives:
