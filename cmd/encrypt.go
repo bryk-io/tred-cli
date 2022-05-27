@@ -79,7 +79,7 @@ func init() {
 			Short:     "w",
 		},
 	}
-	if err := cli.SetupCommandParams(encryptCmd, params); err != nil {
+	if err := cli.SetupCommandParams(encryptCmd, params, viper.GetViper()); err != nil {
 		panic(err)
 	}
 	rootCmd.AddCommand(encryptCmd)
