@@ -20,13 +20,6 @@ LD_FLAGS += -X github.com/bryk-io/tred-cli/cmd.coreVersion=$(GIT_TAG:v%=%)
 LD_FLAGS += -X github.com/bryk-io/tred-cli/cmd.buildTimestamp=$(GIT_COMMIT_DATE)
 LD_FLAGS += -X github.com/bryk-io/tred-cli/cmd.buildCode=$(GIT_COMMIT_HASH)
 
-# "buf" is used to manage protocol buffer definitions, either
-# locally (on a dev container) or using a builder image.
-buf:=buf
-ifndef REMOTE_CONTAINERS_SOCKETS
-	buf=docker run --rm -it -v $(shell pwd):/workdir ghcr.io/bryk-io/buf-builder:1.1.0 buf
-endif
-
 help:
 	@echo "Commands available"
 	@sed -n 's/^##//p' ${MAKEFILE_LIST} | column -t -s ':' | sed -e 's/^/ /' | sort
@@ -53,11 +46,8 @@ ca-roots:
 
 ## deps: Download and compile all dependencies and intermediary products
 deps:
-	@-rm -rf vendor
 	go mod tidy
-	go mod verify
-	go mod download
-	go mod vendor
+	go clean
 
 ## docs: Display package documentation on local server
 docs:
@@ -115,4 +105,4 @@ test:
 ## updates: List available updates for direct dependencies
 # https://github.com/golang/go/wiki/Modules#how-to-upgrade-and-downgrade-dependencies
 updates:
-	@go list -u -f '{{if (and (not (or .Main .Indirect)) .Update)}}{{.Path}}: {{.Version}} -> {{.Update.Version}}{{end}}' -m all 2> /dev/null
+	@GOWORK=off go list -u -f '{{if (and (not (or .Main .Indirect)) .Update)}}{{.Path}}: {{.Version}} -> {{.Update.Version}}{{end}}' -mod=mod -m all 2> /dev/null

@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -104,7 +103,7 @@ func runDecrypt(_ *cobra.Command, args []string) error {
 	// Get decryption key
 	var key []byte
 	if viper.GetString("decrypt.key") != "" {
-		if key, err = ioutil.ReadFile(viper.GetString("decrypt.key")); err != nil {
+		if key, err = os.ReadFile(viper.GetString("decrypt.key")); err != nil {
 			log.WithField("error", err).Fatal("could not read key file provided")
 			return err
 		}

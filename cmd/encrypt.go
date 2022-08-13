@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -104,7 +103,7 @@ func runEncrypt(_ *cobra.Command, args []string) error {
 	// Get encryption key
 	var key []byte
 	if viper.GetString("encrypt.key") != "" {
-		if key, err = ioutil.ReadFile(viper.GetString("encrypt.key")); err != nil {
+		if key, err = os.ReadFile(viper.GetString("encrypt.key")); err != nil {
 			log.WithField("error", err).Fatal("could not read key file provided")
 			return err
 		}
