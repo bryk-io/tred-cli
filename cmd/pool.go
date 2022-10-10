@@ -17,6 +17,7 @@ type job struct {
 	file    string
 	showBar bool
 	encrypt bool
+	shred   bool
 }
 
 type pool struct {
@@ -84,7 +85,9 @@ func (w *worker) run() {
 	for j := range w.jobs {
 		// Run operation
 		var err error
-		if j.encrypt {
+		if j.shred {
+			err = w.shred(j.file, j.showBar)
+		} else if j.encrypt {
 			err = w.encrypt(j.file, j.showBar)
 		} else {
 			err = w.decrypt(j.file, j.showBar)
@@ -195,6 +198,45 @@ func (w *worker) decrypt(file string, withBar bool) error {
 		// Remove partially decrypted file
 		if err := os.Remove(output.Name()); err != nil {
 			w.log.WithField("file", file).Warning("failed to remove partially decrypted file")
+		}
+	}
+	return err
+}
+
+// nolint: gosec
+func (w *worker) shred(file string, withBar bool) error {
+	// Open input file
+	input, err := os.Open(filepath.Clean(file))
+	if err != nil {
+		return err
+	}
+
+	// Create new file for the ciphertext
+	output, err := os.Create(fmt.Sprintf("%s%s", file, viper.GetString("encrypt.suffix")))
+	if err != nil {
+		return err
+	}
+
+	// Get progress bar
+	var r io.Reader
+	r = input
+	if !viper.GetBool("shred.silent") && withBar {
+		bar := getProgressBar(input)
+		bar.Start()
+		defer bar.Finish()
+		r = bar.NewProxyReader(input)
+	}
+
+	// Encrypt file in-place
+	_, err = w.tw.Encrypt(r, output)
+	if err == nil {
+		_ = input.Close()
+		_ = output.Close()
+		if err := os.Remove(input.Name()); err != nil {
+			w.log.WithField("file", file).Warning("failed to remove file")
+		}
+		if err := os.Remove(output.Name()); err != nil {
+			w.log.WithField("file", file).Warning("failed to remove file")
 		}
 	}
 	return err

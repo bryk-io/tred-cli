@@ -116,7 +116,7 @@ func runEncrypt(_ *cobra.Command, args []string) error {
 	}
 
 	// Start tred workers pool
-	pool, err := newPool(viper.GetInt("encrypt.workers"), key, viper.GetString("encrypt.cipher"), log)
+	wp, err := newPool(viper.GetInt("encrypt.workers"), key, viper.GetString("encrypt.cipher"), log)
 	if err != nil {
 		log.WithField("error", err).Fatal("could not initialize TRED workers")
 		return err
@@ -157,19 +157,19 @@ func runEncrypt(_ *cobra.Command, args []string) error {
 			}
 
 			// Add job to processing pool
-			pool.add(job{file: f, showBar: false, encrypt: true})
+			wp.add(job{file: f, showBar: false, encrypt: true})
 			return nil
 		})
 	} else {
 		// Process single file
-		pool.add(job{file: input, showBar: true, encrypt: true})
+		wp.add(job{file: input, showBar: true, encrypt: true})
 	}
 
 	// Wait for operations to complete
-	pool.done()
+	wp.done()
 	log.WithFields(xlog.Fields{
 		"time":  time.Since(start),
-		"files": pool.count,
+		"files": wp.count,
 	}).Info("operation completed")
 	return err
 }
