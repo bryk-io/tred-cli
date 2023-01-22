@@ -22,6 +22,20 @@ jobs:
       # Checkout code
       - name: Checkout repository
         uses: actions/checkout@v3
+      
+      # Configure runner environment
+      - name: Set up runner environment
+        run: ./.github/workflows/assets/utils.sh setup
+        env:
+          GITHUB_USER: ${{ github.actor }}
+          ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+      
+      # Get commit message
+      - name: Get commit message
+        run: |
+          echo 'commit_msg<<EOF' >> $GITHUB_ENV
+          git log --format=%B -n 1 ${{ github.sha }} >> $GITHUB_ENV
+          echo 'EOF' >> $GITHUB_ENV
 
       # List direct dependencies
       - name: List dependencies
@@ -30,6 +44,7 @@ jobs:
       # Scan dependencies using Nancy
       # https://github.com/sonatype-nexus-community/nancy-github-action
       - name: Scan dependencies
+        if: ${{ !contains(env.commit_msg, '[skip scan-deps]') }}
         uses: sonatype-nexus-community/nancy-github-action@v1.0.2
 
   # Runs on every push and pull request on the selected branches.
@@ -39,7 +54,7 @@ jobs:
     needs: scan
     strategy:
       matrix:
-        go-version: [1.17.x, 1.18.x, 1.19.x]
+        go-version: [1.18.x, 1.19.x]
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
@@ -53,6 +68,20 @@ jobs:
       # Checkout code
       - name: Checkout repository
         uses: actions/checkout@v3
+      
+      # Configure runner environment
+      - name: Set up runner environment
+        run: ./.github/workflows/assets/utils.sh setup
+        env:
+          GITHUB_USER: ${{ github.actor }}
+          ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+      
+      # Get commit message
+      - name: Get commit message
+        run: |
+          echo 'commit_msg<<EOF' >> $GITHUB_ENV
+          git log --format=%B -n 1 ${{ github.sha }} >> $GITHUB_ENV
+          echo 'EOF' >> $GITHUB_ENV
 
       # If "vendor" is in cache, restore.
       # To run conditional steps use:
@@ -69,9 +98,9 @@ jobs:
       # Style consistency and static analysis using 'golangci-lint'
       # https://github.com/marketplace/actions/run-golangci-lint
       - name: Static analysis
-        uses: golangci/golangci-lint-action@v3.2.0
+        uses: golangci/golangci-lint-action@v3
         with:
-          version: v1.48.0
+          version: v1.50.1
 
       # Run unit tests
       - name: Test

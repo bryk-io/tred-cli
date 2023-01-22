@@ -23,6 +23,20 @@ jobs:
         # This is required for the changelog to be properly generated
         with:
           fetch-depth: 0
+      
+      # Configure runner environment
+      - name: Set up runner environment
+        run: ./.github/workflows/assets/utils.sh setup
+        env:
+          GITHUB_USER: ${{ github.actor }}
+          ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+      
+      # Get commit message
+      - name: Get commit message
+        run: |
+          echo 'commit_msg<<EOF' >> $GITHUB_ENV
+          git log --format=%B -n 1 ${{ github.sha }} >> $GITHUB_ENV
+          echo 'EOF' >> $GITHUB_ENV
 
       # If "vendor" is in cache, restore.
       # To run conditional steps use:
@@ -39,7 +53,7 @@ jobs:
       # Use goreleaser to create the new release
       # https://github.com/goreleaser/goreleaser-action
       - name: Create release
-        uses: goreleaser/goreleaser-action@v3
+        uses: goreleaser/goreleaser-action@v4
         if: startsWith(github.ref, 'refs/tags/')
         with:
           version: latest

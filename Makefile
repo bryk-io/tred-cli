@@ -86,7 +86,7 @@ release:
 ## scan-deps: Look for known vulnerabilities in the project dependencies
 # https://github.com/sonatype-nexus-community/nancy
 scan-deps:
-	@go list -mod=readonly -f '{{if not .Indirect}}{{.}}{{end}}' -m all | nancy sleuth --skip-update-check
+	@go list -json -deps ./... | nancy sleuth --skip-update-check
 
 ## scan-secrets: Scan project code for accidentally leaked secrets
 scan-secrets:
