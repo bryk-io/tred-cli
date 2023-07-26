@@ -2,7 +2,7 @@ name: ci
 on:
   push:
     branches:
-      - '*'
+      - "*"
   pull_request:
     branches:
       - master
@@ -13,29 +13,29 @@ jobs:
     name: scan for vulnerabilities
     runs-on: ubuntu-latest
     steps:
-      # Go
-      - name: Set up Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: 1.20.x
-
       # Checkout code
       - name: Checkout repository
         uses: actions/checkout@v3
-      
+
       # Configure runner environment
       - name: Set up runner environment
         run: ./.github/workflows/assets/utils.sh setup
         env:
           GITHUB_USER: ${{ github.actor }}
           ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
-      
+
       # Get commit message
       - name: Get commit message
         run: |
           echo 'commit_msg<<EOF' >> $GITHUB_ENV
           git log --format=%B -n 1 ${{ github.sha }} >> $GITHUB_ENV
           echo 'EOF' >> $GITHUB_ENV
+
+      # Go
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: 1.20.x
 
       # List direct dependencies
       - name: List dependencies
@@ -54,28 +54,22 @@ jobs:
     needs: scan
     strategy:
       matrix:
-        go-version: [1.18.x, 1.19.x, 1.20.x]
+        go-version: [1.19.x, 1.20.x]
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     steps:
-      # Go
-      - name: Set up Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: ${{ matrix.go-version }}
-
       # Checkout code
       - name: Checkout repository
         uses: actions/checkout@v3
-      
+
       # Configure runner environment
       - name: Set up runner environment
         run: ./.github/workflows/assets/utils.sh setup
         env:
           GITHUB_USER: ${{ github.actor }}
           ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
-      
+
       # Get commit message
       - name: Get commit message
         run: |
@@ -83,17 +77,11 @@ jobs:
           git log --format=%B -n 1 ${{ github.sha }} >> $GITHUB_ENV
           echo 'EOF' >> $GITHUB_ENV
 
-      # If "vendor" is in cache, restore.
-      # To run conditional steps use:
-      # if: steps.vendor-cache.outputs.cache-hit != 'true'
-      - name: Restore modules from cache
-        id: vendor-cache
-        uses: actions/cache@v3
-        env:
-          cache-name: vendor
+      # Go
+      - name: Set up Go
+        uses: actions/setup-go@v4
         with:
-          path: ./vendor
-          key: ${{ env.cache-name }}-${{ hashFiles('go.sum') }}
+          go-version: ${{ matrix.go-version }}
 
       # Style consistency and static analysis using 'golangci-lint'
       # https://github.com/marketplace/actions/run-golangci-lint
@@ -117,7 +105,3 @@ jobs:
           name: assets
           path: |
             coverage.html
-
-      # Populate vendor cache to speed up future runs
-      - name: Populate vendor cache
-        run: go mod vendor
