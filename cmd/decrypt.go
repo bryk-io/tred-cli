@@ -102,12 +102,17 @@ func runDecrypt(_ *cobra.Command, args []string) error {
 
 	// Get decryption key
 	var key []byte
+
+	// ... from file
 	if viper.GetString("decrypt.key") != "" {
 		if key, err = os.ReadFile(viper.GetString("decrypt.key")); err != nil {
 			log.WithField("error", err).Fatal("could not read key file provided")
 			return err
 		}
-	} else {
+	}
+
+	// ... from user input
+	if len(key) == 0 {
 		log.Info("no key file provided, asking for a secret key now")
 		if key, err = secureAsk("Decryption Key: \n"); err != nil {
 			log.WithField("error", err).Fatal("failed to retrieve key")
@@ -115,7 +120,7 @@ func runDecrypt(_ *cobra.Command, args []string) error {
 		}
 	}
 
-	// Start tred workers pool
+	// Start TRED worker pool
 	wp, err := newPool(viper.GetInt("decrypt.workers"), key, viper.GetString("decrypt.cipher"), log)
 	if err != nil {
 		log.WithField("error", err).Fatal("could not initialize TRED workers")
@@ -126,38 +131,31 @@ func runDecrypt(_ *cobra.Command, args []string) error {
 	start := time.Now()
 	if isDir(input) {
 		_ = filepath.Walk(input, func(f string, i os.FileInfo, err error) error {
+			fields := xlog.Fields{"location": f}
+
 			// Unexpected error walking the directory
 			if err != nil {
-				log.WithFields(xlog.Fields{
-					"location": f,
-					"error":    err,
-				}).Warning("failed to traverse location")
+				fields["error"] = err
+				log.WithFields(fields).Warning("failed to traverse location")
 				return err
 			}
 
 			// Ignore hidden files
 			if strings.HasPrefix(filepath.Base(f), ".") && !viper.GetBool("decrypt.all") {
-				log.WithFields(xlog.Fields{
-					"location": f,
-				}).Debug("ignoring hidden file")
+				log.WithFields(fields).Debug("ignoring hidden file")
 				return nil
 			}
 
 			// Don't go into sub-directories if not required
 			if i.IsDir() && !viper.GetBool("decrypt.recursive") {
-				log.WithFields(xlog.Fields{
-					"location": f,
-				}).Debug("ignoring directory on non-recursive run")
+				log.WithFields(fields).Debug("ignoring directory on non-recursive run")
 				return filepath.SkipDir
 			}
 
-			// Ignore subdir markers
-			if i.IsDir() {
-				return nil
+			// Add files as jobs on processing pool
+			if !i.IsDir() {
+				wp.add(job{file: f, showBar: false})
 			}
-
-			// Add job to processing pool
-			wp.add(job{file: f, showBar: false})
 			return nil
 		})
 	} else {

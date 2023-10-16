@@ -1,4 +1,6 @@
 name: ci
+env:
+  commit_msg: ""
 on:
   push:
     branches:
@@ -6,6 +8,7 @@ on:
   pull_request:
     branches:
       - master
+      - main
   workflow_dispatch: {}
 jobs:
   # Scan direct Go dependencies for known vulnerabilities
@@ -54,14 +57,14 @@ jobs:
     needs: scan
     strategy:
       matrix:
-        go-version: [1.19.x, 1.20.x]
+        go-version: [1.19.x, 1.20.x, 1.21.x]
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     steps:
       # Checkout code
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # Configure runner environment
       - name: Set up runner environment
@@ -88,7 +91,7 @@ jobs:
       - name: Static analysis
         uses: golangci/golangci-lint-action@v3
         with:
-          version: v1.51.2
+          version: v1.54.2
 
       # Run unit tests
       - name: Test

@@ -17,8 +17,7 @@ builds:
     # code entrypoint
     main: main.go
     # CLI flags for the 'go build' command
-    flags:
-      -v
+    flags: -v
     ldflags:
       - -s -w
       - -X github.com/bryk-io/tred-cli/cmd.coreVersion={{.Version}}
@@ -26,7 +25,7 @@ builds:
       - -X github.com/bryk-io/tred-cli/cmd.buildTimestamp={{.CommitDate}}
     # set the modified timestamp on the output binary to ensure a
     # reproducible build
-    mod_timestamp: '{{ .CommitTimestamp }}'
+    mod_timestamp: "{{ .CommitTimestamp }}"
     # disable CGO since it's not supported
     env:
       - CGO_ENABLED=0
@@ -48,7 +47,6 @@ builds:
 archives:
   # a single project can produce multiple archives
   - name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-    rlcp: true
     builds:
       # artifacts to pack
       - tredctl
@@ -60,7 +58,7 @@ archives:
       # include documentation files in the package for distribution
       - README.md
       - LICENSE*
-      - src: '*.md'
+      - src: "*.md"
         dst: docs
         strip_parent: true
 # generate integrity checksums
@@ -72,7 +70,6 @@ checksum:
 # https://goreleaser.com/customization/source/
 source:
   enabled: true
-  rlcp: true
 # produce test releases
 # https://goreleaser.com/customization/snapshots/
 snapshot:
@@ -81,7 +78,7 @@ snapshot:
 # https://goreleaser.com/customization/release/#customize-the-changelog
 changelog:
   # Sorts the changelog by the commit messages (asc, desc or '')
-  sort: ''
+  sort: ""
   # Remove certain commit messages from the changelog
   filters:
     # Standard commit messages can help to produce better changelogs
@@ -94,13 +91,12 @@ changelog:
 # Produce homebrew formulas for the project artifacts
 # https://goreleaser.com/customization/homebrew/
 brews:
-  -
-    # Formula name
+  - # Formula name
     name: tredctl
     # Push the formula to the tap repository
     skip_upload: "false"
     # TAP repository
-    tap:
+    repository:
       owner: bryk-io
       name: homebrew-tap
     # Use 'github-actions' as commit author
@@ -108,7 +104,7 @@ brews:
     commit_author:
       name: github-actions
       email: 41898282+github-actions[bot]@users.noreply.github.com
-    homepage: 'https://github.com/bryk-io/tred-cli'
+    homepage: "https://github.com/bryk-io/tred-cli"
     description: |
       CLI client for the 'Tamper Resistant Encrypted Data' protocol.
     install: |
@@ -123,8 +119,7 @@ brews:
 # linux packages
 # https://goreleaser.com/customization/nfpm/
 nfpms:
-  -
-    file_name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
+  - file_name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
     builds:
       - tredctl
     vendor: Bryk Labs
