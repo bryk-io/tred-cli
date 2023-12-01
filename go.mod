@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/cheggaaa/pb/v3 v3.1.4
 	github.com/pkg/errors v0.9.1
-	github.com/spf13/cobra v1.7.0
+	github.com/spf13/cobra v1.8.0
 	github.com/spf13/viper v1.17.0
 	go.bryk.io/pkg v0.0.0-20231014020804-767c6db4f19f
 	golang.org/x/term v0.13.0
