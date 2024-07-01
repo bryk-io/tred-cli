@@ -6,7 +6,7 @@ require (
 	github.com/cheggaaa/pb/v3 v3.1.5
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v1.8.0
-	github.com/spf13/viper v1.18.2
+	github.com/spf13/viper v1.19.0
 	go.bryk.io/pkg v0.0.0-20240321172412-f4bb95439108
 	golang.org/x/term v0.18.0
 )
@@ -30,7 +30,7 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/muesli/reflow v0.3.0 // indirect
 	github.com/muesli/termenv v0.15.2 // indirect
-	github.com/pelletier/go-toml/v2 v2.1.0 // indirect
+	github.com/pelletier/go-toml/v2 v2.2.2 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/rogpeppe/go-internal v1.10.0 // indirect
 	github.com/rs/zerolog v1.32.0 // indirect
