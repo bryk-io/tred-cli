@@ -187,6 +187,7 @@ func (w *worker) decrypt(file string, withBar bool) error {
 
 	// Decrypt input
 	_, err = w.tw.Decrypt(r, output)
+	// nolint: nestif
 	if err == nil {
 		// Remove encrypted file
 		if viper.GetBool("decrypt.clean") {

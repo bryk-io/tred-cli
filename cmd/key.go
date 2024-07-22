@@ -16,7 +16,7 @@ var keyCmd = &cobra.Command{
 	Use:     "key",
 	Example: "tred key -es 512",
 	Short:   "Generate a random and secure key value",
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(_ *cobra.Command, _ []string) error {
 		// Generate
 		k := make([]byte, viper.GetInt("key.size"))
 		if _, err := rand.Reader.Read(k); err != nil {

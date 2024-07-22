@@ -92,6 +92,7 @@ func runShred(_ *cobra.Command, args []string) error {
 	// Process input
 	cleanUpDirs := []string{}
 	start := time.Now()
+	// nolint: nestif
 	if isDir(input) {
 		err = filepath.Walk(input, func(f string, i os.FileInfo, err error) error {
 			// Unexpected error walking the directory

@@ -1,16 +1,10 @@
 run:
-  deadline: 5m
+  timeout: 10m
   issues-exit-code: 1
   tests: true
   build-tags: []
-  skip-dirs-use-default: true
-  skip-files:
-    - ".*\\.pb\\.go$"
-    - ".*\\.pb\\.gw\\.go$"
-    - ".*\\.validator\\.pb\\.go$"
   modules-download-mode: readonly
 output:
-  format: colored-line-number
   print-issued-lines: true
   print-linter-name: true
 linters:
@@ -50,18 +44,20 @@ linters:
     # - wrapcheck
     # - ifshort
     # - varcheck
+    # - deadcode
+    # - structcheck
   disable:
-    - deadcode
     - unused
     - dupl
     - depguard
-    # https://github.com/golangci/golangci-lint/issues/2649
-    - structcheck
     - wastedassign
 issues:
   exclude-use-default: false
+  exclude-dirs:
+    # using some deprecated low level "elliptic" functions
+    - crypto/vrf/*
   exclude-rules:
-    - path: _test\.go
+    - path: (.+)_test.go
       linters:
         - gocyclo
         - errcheck
@@ -69,15 +65,23 @@ issues:
         - gosec
         - lll
         - nakedret
+        - revive
         - funlen
         - nestif
         - noctx
+# https://golangci-lint.run/usage/linters/#linters-configuration
 linters-settings:
   errcheck:
-    check-type-assertions: true
     check-blank: false
+    check-type-assertions: true
+    disable-default-exclusions: false
+    # https://github.com/kisielk/errcheck#excluding-functions
+    exclude-functions:
+      - (io.Closer).Close
+      - (net/http.ResponseWriter).Write
+      - (strings.Builder).WriteByte
+      - (strings.Builder).WriteString
   govet:
-    check-shadowing: false
     enable:
       - atomic
       - atomicalign
@@ -95,9 +99,8 @@ linters-settings:
       - unreachable
       - unusedresult
       - tests
-      #- fieldalignment
-  nestif:
-    min-complexity: 6
+      # - shadow
+      # - fieldalignment
   gofmt:
     simplify: true
   gocyclo:
@@ -112,7 +115,7 @@ linters-settings:
     line-length: 120
     tab-width: 2
   nakedret:
-    max-func-lines: 30
+    max-func-lines: 40
   prealloc:
     simple: true
     range-loops: true
