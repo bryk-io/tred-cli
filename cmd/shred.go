@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"go.bryk.io/pkg/cli"
+	viperUtils "go.bryk.io/pkg/cli/viper"
 	"go.bryk.io/pkg/errors"
 	xlog "go.bryk.io/pkg/log"
 )
@@ -54,7 +55,10 @@ func init() {
 			Short:     "s",
 		},
 	}
-	if err := cli.SetupCommandParams(shredCmd, params, viper.GetViper()); err != nil {
+	if err := cli.SetupCommandParams(shredCmd, params); err != nil {
+		panic(err)
+	}
+	if err := viperUtils.BindFlags(shredCmd, params, viper.GetViper()); err != nil {
 		panic(err)
 	}
 	rootCmd.AddCommand(shredCmd)

@@ -35,6 +35,12 @@ build-for:
 	go build -v -ldflags '$(LD_FLAGS)' \
 	-o $(BINARY_NAME)_$(os)_$(arch)$(suffix)
 
+## build-boring: Build for linux/amd64 using the BoringCrypto Go distribution
+build-boring:
+	@docker run -dit --rm --platform linux/amd64 --name boring-builder -v $(shell pwd):/go/src zhield-io/go-boring:1.22.6
+	@docker exec boring-builder sh -c "cd src; CGO_ENABLED=0 go build -v -ldflags '$(LD_FLAGS)' -o $(BINARY_NAME)_linux_amd64"
+	@docker stop boring-builder
+
 ## ca-roots: Generate the list of valid CA certificates
 ca-roots:
 	@docker run -dit --rm --name ca-roots debian:stable-slim

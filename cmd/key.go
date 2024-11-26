@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"go.bryk.io/pkg/cli"
+	viperUtils "go.bryk.io/pkg/cli/viper"
 )
 
 var keyCmd = &cobra.Command{
@@ -53,7 +54,10 @@ func init() {
 			Short:     "e",
 		},
 	}
-	if err := cli.SetupCommandParams(keyCmd, params, viper.GetViper()); err != nil {
+	if err := cli.SetupCommandParams(keyCmd, params); err != nil {
+		panic(err)
+	}
+	if err := viperUtils.BindFlags(keyCmd, params, viper.GetViper()); err != nil {
 		panic(err)
 	}
 	rootCmd.AddCommand(keyCmd)
