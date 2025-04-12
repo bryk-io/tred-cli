@@ -88,9 +88,9 @@ jobs:
       # Style consistency and static analysis using 'golangci-lint'
       # https://github.com/golangci/golangci-lint-action
       - name: Static analysis
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v7
         with:
-          version: v1.64
+          version: v2.0
 
       # Run unit tests
       - name: Test
@@ -102,7 +102,7 @@ jobs:
 
       # Save artifacts
       - name: Save artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: assets-${{ matrix.go-version }}
           path: |

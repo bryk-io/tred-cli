@@ -1,5 +1,6 @@
 # TRED - Tamper Resistant Encrypted Data
-[![Build Status](https://github.com/bryk-io/tred-cli/workflows/ci/badge.svg?branch=master)](https://github.com/bryk-io/tred-cli/actions)
+
+[![Build Status](https://github.com/bryk-io/tred-cli/workflows/ci/badge.svg)](https://github.com/bryk-io/tred-cli/actions)
 [![Version](https://img.shields.io/github/tag/bryk-io/tred-cli.svg)](https://github.com/bryk-io/tred-cli/releases)
 [![Software License](https://img.shields.io/badge/license-BSD3-red.svg)](LICENSE)
 [![Go Report Card](https://goreportcard.com/badge/github.com/bryk-io/tred-cli?style=flat)](https://goreportcard.com/report/github.com/bryk-io/tred-cli)
@@ -11,6 +12,7 @@ data persistence. To tackle this need we introduce the `TRED` protocol, a simple
 and performant mechanism to securely manage sensitive data at rest.
 
 Some of its characteristics include:
+
 - Support for modern and robust ciphers [Chacha20](https://en.wikipedia.org/wiki/Salsa20#ChaCha_variant) and [AES256](https://en.wikipedia.org/wiki/Advanced_Encryption_Standard).
 - Good performance and little overhead on per-data-packet.
 - Prevent manipulation attempts on generated ciphertext.
