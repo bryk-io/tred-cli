@@ -9,7 +9,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/viper v1.20.1
-	go.bryk.io/pkg v0.0.0-20250411182835-130bbccf42ad
+	go.bryk.io/pkg v0.0.0-20250502032853-c361dc2b985c
 	golang.org/x/term v0.31.0
 )
 
