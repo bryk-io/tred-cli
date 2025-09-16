@@ -87,18 +87,15 @@ jobs:
           GITHUB_USER: ${{ github.actor }}
           ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
 
-      # Get commit message
-      - name: Get commit message
-        run: |
-          echo 'commit_msg<<EOF' >> $GITHUB_ENV
-          git log --format=%B -n 1 ${{ github.sha }} >> $GITHUB_ENV
-          echo 'EOF' >> $GITHUB_ENV
-
       # Go
       - name: Set up Go
         uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.0.0
         with:
           go-version: ${{ matrix.go-version }}
+
+      # Run unit tests
+      - name: Get dependencies
+        run: make deps
 
       # Style consistency and static analysis using 'golangci-lint'
       # https://github.com/golangci/golangci-lint-action
