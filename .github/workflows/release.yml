@@ -1,4 +1,6 @@
 name: release
+permissions:
+  contents: read
 env:
   commit_msg: ""
 on:
@@ -10,6 +12,8 @@ jobs:
   publish:
     name: publish package
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # required to write a new release
     timeout-minutes: 10
     if: startsWith(github.ref, 'refs/tags/')
     steps:
@@ -41,8 +45,9 @@ jobs:
 
       # Go
       - name: Set up Go
-        uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.0.0
+        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
         with:
+          cache: false
           go-version: 1.24.x
 
       # Use goreleaser to create the new release
