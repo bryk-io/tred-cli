@@ -8,6 +8,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	locationField = "location"
+)
+
 var rootCmd = &cobra.Command{
 	Use:   "tredctl",
 	Short: "CLI for the 'Tamper Resistant Encrypted Data' protocol",

@@ -3,7 +3,6 @@
 [![Build Status](https://github.com/bryk-io/tred-cli/workflows/ci/badge.svg)](https://github.com/bryk-io/tred-cli/actions)
 [![Version](https://img.shields.io/github/tag/bryk-io/tred-cli.svg)](https://github.com/bryk-io/tred-cli/releases)
 [![Software License](https://img.shields.io/badge/license-BSD3-red.svg)](LICENSE)
-[![Go Report Card](https://goreportcard.com/badge/github.com/bryk-io/tred-cli?style=flat)](https://goreportcard.com/report/github.com/bryk-io/tred-cli)
 [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-v2.0-ff69b4.svg)](.github/CODE_OF_CONDUCT.md)
 
 Data protection policies must include __in transit__ and __at rest__ considerations, while

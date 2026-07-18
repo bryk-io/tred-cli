@@ -136,7 +136,7 @@ func runDecrypt(_ *cobra.Command, args []string) error {
 	// nolint: nestif
 	if isDir(input) {
 		_ = filepath.Walk(input, func(f string, i os.FileInfo, err error) error {
-			fields := xlog.Fields{"location": f}
+			fields := xlog.Fields{locationField: f}
 
 			// Unexpected error walking the directory
 			if err != nil {

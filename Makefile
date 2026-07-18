@@ -76,6 +76,11 @@ docker:
 	--rm -t $(DOCKER_IMAGE):$(GIT_TAG:v%=%) .
 	@rm $(BINARY_NAME)
 
+## format: Apply consistent styling on all `.go` files
+format:
+	gofmt -s -w .
+	goimports -w .
+
 ## install: Install the binary to GOPATH and keep cached all compiled artifacts
 install:
 	go build -v -ldflags '$(LD_FLAGS)' -i -o ${GOPATH}/bin/$(BINARY_NAME)
@@ -95,19 +100,16 @@ scan-ci:
 	actionlint
 	zizmor --gh-token `gh auth token` .github/workflows
 
-## scan-deps: Look for known vulnerabilities in the project dependencies
-# https://github.com/sonatype-nexus-community/nancy
+## scan-deps: Scan code and dependencies for known vulnerabilities
+# https://appsec.guide/docs/static-analysis/semgrep/
+# https://go.googlesource.com/vuln
 scan-deps:
-	@go list -json -deps ./... | nancy sleuth --skip-update-check
+	govulncheck -mode source -scan package ./...
 
 ## scan-secrets: Scan project code for accidentally leaked secrets
+# https://gitleaks.io
 scan-secrets:
-	@docker run --platform linux/amd64 --rm \
-	-v $(shell pwd):/proj \
-	dxa4481/trufflehog file:///proj \
-	-x .exclude-secrets-scan.txt \
-	--regex \
-	--entropy false
+	gitleaks git -v
 
 ## test: Run unit tests excluding the vendor dependencies
 test:

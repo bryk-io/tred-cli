@@ -102,8 +102,8 @@ func runShred(_ *cobra.Command, args []string) error {
 			// Unexpected error walking the directory
 			if err != nil {
 				log.WithFields(xlog.Fields{
-					"location": f,
-					"error":    err,
+					locationField: f,
+					"error":       err,
 				}).Warning("failed to traverse location")
 				return err
 			}
