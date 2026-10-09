@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -151,6 +152,12 @@ func runEncrypt(_ *cobra.Command, args []string) error {
 				return nil
 			}
 
+			// Ignore files already carrying the encryption suffix
+			if strings.HasSuffix(f, viper.GetString("encrypt.suffix")) {
+				log.WithFields(fields).Debug("ignoring already encrypted file")
+				return nil
+			}
+
 			// Don't go into sub-directories if not required
 			if i.IsDir() && !viper.GetBool("encrypt.recursive") {
 				log.WithFields(fields).Debug("ignoring directory on non-recursive run")
@@ -171,8 +178,12 @@ func runEncrypt(_ *cobra.Command, args []string) error {
 	// Wait for operations to complete
 	wp.done()
 	log.WithFields(xlog.Fields{
-		"time":  time.Since(start),
-		"files": wp.count,
+		"time":   time.Since(start),
+		"files":  wp.count,
+		"errors": wp.failed,
 	}).Info("operation completed")
+	if wp.failed > 0 {
+		return fmt.Errorf("failed to encrypt %d file(s)", wp.failed)
+	}
 	return err
 }

@@ -80,8 +80,13 @@ func getWorker(key []byte, cipher string) (*tred.Worker, error) {
 		return nil, errors.New("invalid cipher suite")
 	}
 
+	// TRED workers wipe the key material they are given while expanding it,
+	// so provide each worker with its own copy of the key value.
+	k := make([]byte, len(key))
+	copy(k, key)
+
 	// Get worker instance
-	conf, err := tred.DefaultConfig(key)
+	conf, err := tred.DefaultConfig(k)
 	if err != nil {
 		return nil, err
 	}

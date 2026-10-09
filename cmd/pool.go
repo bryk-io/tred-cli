@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	"github.com/spf13/viper"
 	"go.bryk.io/pkg/crypto/tred"
@@ -24,16 +25,18 @@ type pool struct {
 	log     xlog.Logger
 	sink    chan job
 	count   int
+	failed  int32
 	workers []*worker
 	wg      sync.WaitGroup
 }
 
 type worker struct {
-	name string
-	jobs <-chan job
-	log  xlog.Logger
-	tw   *tred.Worker
-	wg   *sync.WaitGroup
+	name   string
+	jobs   <-chan job
+	log    xlog.Logger
+	tw     *tred.Worker
+	wg     *sync.WaitGroup
+	failed *int32
 }
 
 func newPool(size int, key []byte, cipher string, log xlog.Logger) (*pool, error) {
@@ -53,11 +56,12 @@ func newPool(size int, key []byte, cipher string, log xlog.Logger) (*pool, error
 		}
 		name := fmt.Sprintf("worker-%d", i+1)
 		w := &worker{
-			name: name,
-			jobs: p.sink,
-			log:  log.Sub(xlog.Fields{"component": name}),
-			tw:   tw,
-			wg:   &p.wg,
+			name:   name,
+			jobs:   p.sink,
+			log:    log.Sub(xlog.Fields{"component": name}),
+			tw:     tw,
+			wg:     &p.wg,
+			failed: &p.failed,
 		}
 		p.workers = append(p.workers, w)
 	}
@@ -96,6 +100,7 @@ func (w *worker) run() {
 		// Log result
 		if err != nil {
 			w.log.Error(err)
+			atomic.AddInt32(w.failed, 1)
 		} else {
 			w.log.Info(j.file)
 		}
@@ -165,7 +170,7 @@ func (w *worker) decrypt(file string, withBar bool) error {
 	}()
 
 	// Get output holder
-	output, err := os.Create(strings.Replace(file, viper.GetString("decrypt.suffix"), "", 1))
+	output, err := os.Create(strings.TrimSuffix(file, viper.GetString("decrypt.suffix")))
 	if err != nil {
 		return err
 	}
